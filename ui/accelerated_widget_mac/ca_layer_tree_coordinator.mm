@@ -32,6 +32,7 @@ CALayerTreeCoordinator::CALayerTreeCoordinator(
           allow_av_sample_buffer_display_layer),
       buffer_presented_callback_(buffer_presented_callback),
       metal_device_(metal_device) {
+#if !BUILDFLAG(IS_IOS_TVOS)
   if (allow_remote_layers_) {
     root_ca_layer_ = [[CALayer alloc] init];
 #if BUILDFLAG(IS_MAC)
@@ -60,6 +61,7 @@ CALayerTreeCoordinator::CALayerTreeCoordinator(
 #endif
     ca_context_.layer = root_ca_layer_;
   }
+#endif  // !BUILDFLAG(IS_IOS_TVOS)
 }
 
 CALayerTreeCoordinator::~CALayerTreeCoordinator() = default;
@@ -164,7 +166,9 @@ void CALayerTreeCoordinator::CommitPresentedFrameToCA(
                          "GLImpl", static_cast<int>(gl::GetGLImplementation()),
                          "width", pixel_size_.width());
     if (allow_remote_layers_) {
+#if !BUILDFLAG(IS_IOS_TVOS)
       params.ca_context_id = [ca_context_ contextId];
+#endif
     } else {
       IOSurfaceRef io_surface = frame->layer_tree->GetContentIOSurface();
       if (io_surface) {

@@ -8,6 +8,7 @@
 #include <IOSurface/IOSurfaceRef.h>
 
 #include "base/apple/scoped_cftyperef.h"
+#include "build/build_config.h"
 #include "ui/accelerated_widget_mac/accelerated_widget_mac_export.h"
 #include "ui/accelerated_widget_mac/ca_layer_frame_sink.h"
 
@@ -34,7 +35,9 @@ class ACCELERATED_WIDGET_MAC_EXPORT DisplayCALayerTree
   void UpdateCALayerTree(const gfx::CALayerParams& ca_layer_params) override;
 
  private:
+#if !BUILDFLAG(IS_IOS_TVOS)
   void GotCALayerFrame(uint32_t ca_context_id);
+#endif
   void GotIOSurfaceFrame(base::apple::ScopedCFTypeRef<IOSurfaceRef> io_surface,
                          const gfx::Size& dip_size,
                          float scale_factor);
@@ -57,8 +60,10 @@ class ACCELERATED_WIDGET_MAC_EXPORT DisplayCALayerTree
   // this layer is still used for robustness.
   CALayer* __strong maybe_flipped_layer_;
 
+#if !BUILDFLAG(IS_IOS_TVOS)
   // A remote CALayer with content provided by the output surface.
   CALayerHost* __strong remote_layer_;
+#endif
 
   // A CALayer that has its content set to an IOSurface.
   CALayer* __strong io_surface_layer_;

@@ -22,6 +22,9 @@ bool RemoteLayerAPISupported() {
   if (!base::FeatureList::IsEnabled(kRemoteCoreAnimationAPI))
     return false;
 
+#if BUILDFLAG(IS_IOS_TVOS)
+  return false;
+#else
   // Verify the GPU process interfaces are present.
   static Class caContextClass = NSClassFromString(@"CAContext");
   if (!caContextClass)
@@ -55,6 +58,7 @@ bool RemoteLayerAPISupported() {
 
   // If everything is there, we should be able to use the API.
   return true;
+#endif  // BUILDFLAG(IS_IOS_TVOS)
 }
 
 }  // namespace
