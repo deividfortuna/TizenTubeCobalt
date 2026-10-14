@@ -94,10 +94,19 @@ Find the hash of the distribution certificate:
 security find-identity -v -p codesigning
 ```
 
-Build the release bundle. Increase `CFBundleVersion` in `cobalt/shell/app/tvos-Info.plist` before each upload. App Store Connect rejects a build number that it already has.
+Build the release bundle. The compile takes some hours and does not need the certificate, so you can build with code signing off while you prepare the portal items:
 
 ```
 cobalt/build/gn.py -p tvos-arm64-device -C gold --no-rbe
+echo 'ios_enable_code_signing = false' >> out/tvos-arm64-device_gold/args.gn
+gn gen out/tvos-arm64-device_gold
+autoninja -C out/tvos-arm64-device_gold cobalt
+```
+
+When the certificate and the profile are installed, turn code signing on. Only the bundle steps run again:
+
+```
+sed -i '' '/ios_enable_code_signing/d' out/tvos-arm64-device_gold/args.gn
 cat >> out/tvos-arm64-device_gold/args.gn <<'EOF'
 ios_code_signing_identity = "<Apple Distribution hash>"
 ios_mobileprovision_files = [ "//path/to/DedTube_AppStore.mobileprovision" ]
@@ -105,6 +114,8 @@ EOF
 gn gen out/tvos-arm64-device_gold
 autoninja -C out/tvos-arm64-device_gold cobalt
 ```
+
+Increase `CFBundleVersion` in `cobalt/shell/app/tvos-Info.plist` before each upload. App Store Connect rejects a build number that it already has.
 
 Package the bundle as an `.ipa` file:
 
@@ -126,7 +137,18 @@ The Transporter app from the Mac App Store can upload the same `.ipa` file witho
 
 App Store Connect processes the build for some minutes. Then add testers to the build in the TestFlight tab.
 
-Validation rejects a tvOS app without an App Icon and Top Shelf Image set in the asset catalog. Add the layered icon to `cobalt/shell/app/ios/resources/Assets.xcassets` before the first upload.
+## App icon
+
+tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/app/ios/resources/Assets.xcassets/AppIcon.brandassets`. The images are placeholders. Replace the PNG files and keep the sizes:
+
+| Image | Size at 1x | Size at 2x |
+| --- | --- | --- |
+| App icon layers | 400x240 | 800x480 |
+| App Store icon layers | 1280x768 | none |
+| Top shelf image | 1920x720 | 3840x1440 |
+| Top shelf image wide | 2320x720 | 4640x1440 |
+
+The back layer must be opaque. The front layer can have transparent areas.
 
 ## Platform differences
 
