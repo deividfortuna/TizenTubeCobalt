@@ -1,6 +1,6 @@
-# TizenTube Cobalt on tvOS
+# DedTube on tvOS
 
-This document tells you how to build and run TizenTube Cobalt on the Apple TV simulator and on an Apple TV device.
+This document tells you how to build and run DedTube on the Apple TV simulator and on an Apple TV device. DedTube is the tvOS build of TizenTube Cobalt.
 
 ## Requirements
 
@@ -39,7 +39,7 @@ cobalt/build/gn.py -p tvos-arm64-simulator -C devel --no-rbe
 autoninja -C out/tvos-arm64-simulator_devel cobalt
 ```
 
-The app bundle is `out/tvos-arm64-simulator_devel/TizenTube.app`.
+The app bundle is `out/tvos-arm64-simulator_devel/DedTube.app`.
 
 ## Run on the simulator
 
@@ -54,8 +54,8 @@ open -a Simulator
 Install and start the app:
 
 ```
-xcrun simctl install booted out/tvos-arm64-simulator_devel/TizenTube.app
-xcrun simctl launch --console booted io.gh.reisxd.tizentube.cobalt
+xcrun simctl install booted out/tvos-arm64-simulator_devel/DedTube.app
+xcrun simctl launch --console booted com.deividfortuna.dedtube
 ```
 
 Remote DevTools listens on port 9222 inside the simulator. Open `http://localhost:9222` on the Mac to inspect the page.
@@ -82,7 +82,7 @@ TestFlight needs a release build of the device target, signed for the App Store.
 
 Prepare these items once in the Apple Developer portal and in App Store Connect:
 
-1. Register the bundle identifier `io.gh.reisxd.tizentube.cobalt` as an App ID with the tvOS platform.
+1. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform.
 2. Create an Apple Distribution certificate. Xcode can create it in Settings, Accounts, Manage Certificates.
 3. Create an App Store provisioning profile for tvOS with that App ID and that certificate. Download the `.mobileprovision` file.
 4. Create the app record in App Store Connect with the tvOS platform and the same bundle identifier.
@@ -100,7 +100,7 @@ Build the release bundle. Increase `CFBundleVersion` in `cobalt/shell/app/tvos-I
 cobalt/build/gn.py -p tvos-arm64-device -C gold --no-rbe
 cat >> out/tvos-arm64-device_gold/args.gn <<'EOF'
 ios_code_signing_identity = "<Apple Distribution hash>"
-ios_mobileprovision_files = [ "//path/to/TizenTube_AppStore.mobileprovision" ]
+ios_mobileprovision_files = [ "//path/to/DedTube_AppStore.mobileprovision" ]
 EOF
 gn gen out/tvos-arm64-device_gold
 autoninja -C out/tvos-arm64-device_gold cobalt
@@ -109,17 +109,17 @@ autoninja -C out/tvos-arm64-device_gold cobalt
 Package the bundle as an `.ipa` file:
 
 ```
-rm -rf Payload TizenTube.ipa
+rm -rf Payload DedTube.ipa
 mkdir Payload
-cp -R out/tvos-arm64-device_gold/TizenTube.app Payload/
-zip -qr TizenTube.ipa Payload
+cp -R out/tvos-arm64-device_gold/DedTube.app Payload/
+zip -qr DedTube.ipa Payload
 ```
 
 Validate the package, then upload it:
 
 ```
-xcrun altool --validate-app -t appletvos -f TizenTube.ipa --apiKey <key id> --apiIssuer <issuer id>
-xcrun altool --upload-app -t appletvos -f TizenTube.ipa --apiKey <key id> --apiIssuer <issuer id>
+xcrun altool --validate-app -t appletvos -f DedTube.ipa --apiKey <key id> --apiIssuer <issuer id>
+xcrun altool --upload-app -t appletvos -f DedTube.ipa --apiKey <key id> --apiIssuer <issuer id>
 ```
 
 The Transporter app from the Mac App Store can upload the same `.ipa` file without an API key.

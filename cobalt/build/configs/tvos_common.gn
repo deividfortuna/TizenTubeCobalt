@@ -5,7 +5,7 @@ target_os = "ios"
 target_platform = "tvos"
 use_blink = true
 
-cobalt_bundle_identifier = "io.gh.reisxd.tizentube.cobalt"
+cobalt_bundle_identifier = "com.deividfortuna.dedtube"
 
 # LLD 21 cannot read the TAPI stubs of the macOS 26 SDK and later, so the host
 # tools and the app link with the ld64 from Xcode.
