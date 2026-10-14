@@ -22,6 +22,10 @@
   <string>200</string>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>arm64</string>
+  </array>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsArbitraryLoads</key>
@@ -42,8 +46,7 @@
       <string>${BUNDLE_IDENTIFIER}</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>YouTube</string>
-        <string>YouTubeTV</string>
+        <string>dedtube</string>
       </array>
     </dict>
   </array>

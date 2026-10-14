@@ -109,7 +109,8 @@ When the certificate and the profile are installed, turn code signing on. Only t
 sed -i '' '/ios_enable_code_signing/d' out/tvos-arm64-device_gold/args.gn
 cat >> out/tvos-arm64-device_gold/args.gn <<'EOF'
 ios_code_signing_identity = "<Apple Distribution hash>"
-ios_mobileprovision_files = [ "//path/to/DedTube_AppStore.mobileprovision" ]
+ios_code_signing_identity_description = ""
+ios_mobileprovision_files = [ "/path/to/DedTube_AppStore.mobileprovision" ]
 EOF
 gn gen out/tvos-arm64-device_gold
 autoninja -C out/tvos-arm64-device_gold cobalt
