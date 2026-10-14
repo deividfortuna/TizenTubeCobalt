@@ -125,8 +125,7 @@ bool MediaIsVideoSupported(SbMediaVideoCodec video_codec,
         return false;
       }
 #else
-      SB_LOG(INFO) << "Non-internal build, accepting all VP9";
-      return true;
+      return false;
 #endif  // defined(COBALT_INTERNAL_BUILD)
     }
   }  // @autoreleasepool
