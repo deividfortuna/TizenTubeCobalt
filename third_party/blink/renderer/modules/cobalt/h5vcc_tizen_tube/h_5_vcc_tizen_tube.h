@@ -15,18 +15,12 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_COBALT_H5VCC_TIZENTUBE_H_5_VCC_TIZENTUBE_H_
 #define THIRD_PARTY_BLINK_RENDERER_MODULES_COBALT_H5VCC_TIZENTUBE_H_5_VCC_TIZENTUBE_H_
 
-#include <optional>
-
 #include "cobalt/browser/h5vcc_tizentube/public/mojom/h5vcc_tizentube.mojom-blink.h"
-#include "third_party/blink/renderer/bindings/core/v8/idl_types.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_long_string.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
 #include "third_party/blink/renderer/modules/modules_export.h"
 #include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
-#include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_set.h"
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_remote.h"
+#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
 
@@ -44,18 +38,13 @@ class MODULES_EXPORT H5vccTizenTube final
 
   void ContextDestroyed() override;
 
-  // Web-exposed interface:
-
-  bool InstallAppFromURL(
-      ScriptState* script_state, const WTF::String& url,
-      ExceptionState& exception_state);
-
+  bool InstallAppFromURL(ScriptState* script_state,
+                         const WTF::String& url,
+                         ExceptionState& exception_state);
   WTF::String GetVersion(ScriptState* script_state,
-                                      ExceptionState& exception_state);
-
+                         ExceptionState& exception_state);
   WTF::String GetArchitecture(ScriptState* script_state,
-                             ExceptionState& exception_state);
-
+                              ExceptionState& exception_state);
   void SetFrameRate(float frame_rate);
   void EnterPIP();
   bool SetUserAgent(ScriptState* script_state,
@@ -65,17 +54,14 @@ class MODULES_EXPORT H5vccTizenTube final
                         const WTF::String& feature_name,
                         ExceptionState& exception_state);
 
-  bool EnsureReceiverIsBound();
-
-  HeapMojoRemote<h5vcc_tizentube::mojom::blink::H5vccTizentube> service_;
-
-  void OnConnectionError();
-
-  // Trace method.
   void Trace(Visitor*) const override;
 
  private:
+  bool EnsureReceiverIsBound();
+  bool BindOrThrow(ExceptionState& exception_state);
+  void OnConnectionError();
 
+  HeapMojoRemote<h5vcc_tizentube::mojom::blink::H5vccTizentube> service_;
 };
 
 }  // namespace blink

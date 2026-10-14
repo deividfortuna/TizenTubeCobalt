@@ -108,6 +108,8 @@ static_library("starboard_platform") {
     "media/avc_av_video_sample_buffer_builder.mm",
     "media/avutil/utils.h",
     "media/avutil/utils.mm",
+    "media/preferred_display_frame_rate.cc",
+    "media/preferred_display_frame_rate.h",
     "media/decode_target_internal.h",
     "media/decode_target_release.cc",
     "media/drm_manager.h",

@@ -727,6 +727,12 @@ config("compiler") {
     } else {
       cflags_cc += [ "-std=c++20" ]
     }
+
+    if (is_apple) {
+      # The macOS 26 and tvOS 26 SDKs expect float.h to define INFINITY and
+      # NAN. Clang's float.h only does that when __STRICT_ANSI__ is not set.
+      cflags += [ "-U__STRICT_ANSI__" ]
+    }
   }
 
   if (is_clang) {
@@ -2146,6 +2152,12 @@ config("default_warnings") {
           # TODO(crbug.com/42050603): fix and reenable
           "-Wno-missing-field-initializers",
         ]
+      }
+
+      if (is_apple) {
+        # The macOS 26 and tvOS 26 SDK headers use attributes that only
+        # Apple clang knows, such as stack_protector_ignore in os/log.h.
+        cflags += [ "-Wno-unknown-attributes" ]
       }
 
       cflags += [

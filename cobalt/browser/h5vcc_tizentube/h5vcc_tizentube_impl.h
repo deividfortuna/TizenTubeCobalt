@@ -27,26 +27,25 @@ class RenderFrameHost;
 
 namespace h5vcc_tizentube {
 
-// Implements the H5vccTizentube Mojo interface and extends
-// DocumentService so that an object's lifetime is scoped to the corresponding
-// document / RenderFrameHost (see DocumentService for details).
 class H5vccTizentubeImpl
     : public content::DocumentService<mojom::H5vccTizentube> {
  public:
-  // Creates a H5vccTizentubeImpl. The H5vccTizentubeImpl is bound to the
-  // receiver and its lifetime is scoped to the render_frame_host.
   static void Create(content::RenderFrameHost* render_frame_host,
                      mojo::PendingReceiver<mojom::H5vccTizentube> receiver);
 
   H5vccTizentubeImpl(const H5vccTizentubeImpl&) = delete;
   H5vccTizentubeImpl& operator=(const H5vccTizentubeImpl&) = delete;
 
-  void InstallAppFromURL(const std::string& url, InstallAppFromURLCallback callback) override;
+  void InstallAppFromURL(const std::string& url,
+                         InstallAppFromURLCallback callback) override;
   void GetVersion(GetVersionCallback callback) override;
   void GetArchitecture(GetArchitectureCallback callback) override;
   void GetBrandAndModel(GetBrandAndModelCallback callback) override;
   void SetFrameRate(float frame_rate) override;
+  void EnterPIP() override;
   void SetUserAgent(const std::string& user_agent) override;
+  void HasSystemFeature(const std::string& feature_name,
+                        HasSystemFeatureCallback callback) override;
 
  private:
   H5vccTizentubeImpl(content::RenderFrameHost& render_frame_host,

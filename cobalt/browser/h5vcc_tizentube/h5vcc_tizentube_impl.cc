@@ -14,23 +14,13 @@
 
 #include "cobalt/browser/h5vcc_tizentube/h5vcc_tizentube_impl.h"
 
-#if BUILDFLAG(IS_ANDROID)
-#include "base/android/jni_android.h"
-#include "base/android/jni_string.h"
-#include "base/android/scoped_java_ref.h"
-#include "starboard/android/shared/starboard_bridge.h"
-#endif  // BUILDFLAG(IS_ANDROID)
-
 #include <string>
-#include <variant>
+#include <utility>
 
 #include "cobalt/browser/global_features.h"
+#include "cobalt/browser/h5vcc_tizentube/h5vcc_tizentube_platform.h"
 
 namespace h5vcc_tizentube {
-#if BUILDFLAG(IS_ANDROID)
-using base::android::AttachCurrentThread;
-using starboard::StarboardBridge;
-#endif
 
 // static
 void H5vccTizentubeImpl::Create(
@@ -45,61 +35,40 @@ H5vccTizentubeImpl::H5vccTizentubeImpl(
     : content::DocumentService<mojom::H5vccTizentube>(render_frame_host,
                                                        std::move(receiver)) {}
 
-void H5vccTizentubeImpl::InstallAppFromURL(const std::string& url, InstallAppFromURLCallback callback) {
-  // Implementation for installing app from URL
-  #if BUILDFLAG(IS_ANDROID)
-    JNIEnv* env = AttachCurrentThread();
-    bool result = StarboardBridge::GetInstance()->InstallAppFromURL(env, url.c_str());
-    std::move(callback).Run(result);
-    return;
-  #endif  // BUILDFLAG(IS_ANDROID)
-  std::move(callback).Run(false); // Placeholder implementation
+void H5vccTizentubeImpl::InstallAppFromURL(
+    const std::string& url,
+    InstallAppFromURLCallback callback) {
+  std::move(callback).Run(platform::InstallAppFromURL(url));
 }
 
 void H5vccTizentubeImpl::GetVersion(GetVersionCallback callback) {
-  // Implementation for getting version
-  #if BUILDFLAG(IS_ANDROID)
-    JNIEnv* env = AttachCurrentThread();
-    std::string version = StarboardBridge::GetInstance()->GetVersion(env);
-    std::move(callback).Run(version);
-    return;
-  #endif  // BUILDFLAG(IS_ANDROID)
-  std::move(callback).Run("1.0.0"); // Placeholder implementation
+  std::move(callback).Run(platform::GetVersion());
 }
 
 void H5vccTizentubeImpl::GetArchitecture(GetArchitectureCallback callback) {
-  // Implementation for getting architecture
-  #if BUILDFLAG(IS_ANDROID)
-    JNIEnv* env = AttachCurrentThread();
-    std::string architecture = StarboardBridge::GetInstance()->GetArchitecture(env);
-    std::move(callback).Run(architecture);
-    return;
-  #endif  // BUILDFLAG(IS_ANDROID)
-  std::move(callback).Run("x86_64"); // Placeholder implementation
+  std::move(callback).Run(platform::GetArchitecture());
 }
 
 void H5vccTizentubeImpl::GetBrandAndModel(GetBrandAndModelCallback callback) {
-  // Implementation for getting brand and model
-  #if BUILDFLAG(IS_ANDROID)
-    JNIEnv* env = AttachCurrentThread();
-    std::string brand_and_model = StarboardBridge::GetInstance()->GetBrandAndModel(env);
-    std::move(callback).Run(brand_and_model);
-    return;
-  #endif  // BUILDFLAG(IS_ANDROID)
-  std::move(callback).Run("Example Brand Example Model"); // Placeholder implementation
+  std::move(callback).Run(platform::GetBrandAndModel());
 }
 
 void H5vccTizentubeImpl::SetFrameRate(float frame_rate) {
-  #if BUILDFLAG(IS_ANDROID)
-    JNIEnv* env = AttachCurrentThread();
-    StarboardBridge::GetInstance()->SetFrameRate(env, frame_rate);
-  #endif  // BUILDFLAG(IS_ANDROID)
-  // Implementation for setting frame rate
+  platform::SetFrameRate(frame_rate);
+}
+
+void H5vccTizentubeImpl::EnterPIP() {
+  platform::EnterPIP();
 }
 
 void H5vccTizentubeImpl::SetUserAgent(const std::string& user_agent) {
-  cobalt::GlobalFeatures::GetInstance()->SetSettings(
-      "user_agent_override", user_agent);
+  cobalt::GlobalFeatures::GetInstance()->SetSettings("user_agent_override",
+                                                     user_agent);
+}
+
+void H5vccTizentubeImpl::HasSystemFeature(const std::string& feature_name,
+                                          HasSystemFeatureCallback callback) {
+  std::move(callback).Run(platform::HasSystemFeature(feature_name));
 }
 
 }  // namespace h5vcc_tizentube

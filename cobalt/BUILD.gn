@@ -100,6 +100,7 @@ group("cobalt_browsertests") {
 if (is_ios && target_platform == "tvos") {
   ios_app_bundle("cobalt") {
     testonly = true
+    output_name = "TizenTube"
 
     sources = [ "app/tvos/main.mm" ]
 

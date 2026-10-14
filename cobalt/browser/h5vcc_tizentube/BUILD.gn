@@ -12,11 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if (is_ios) {
+  import("//build/config/apple/mobile_config.gni")
+}
+
 source_set("h5vcc_tizentube") {
   sources = [
     "h5vcc_tizentube_impl.cc",
     "h5vcc_tizentube_impl.h",
+    "h5vcc_tizentube_platform.h",
   ]
+
+  if (is_android) {
+    sources += [ "h5vcc_tizentube_platform_android.cc" ]
+  } else if (is_ios && target_platform == "tvos") {
+    sources += [ "h5vcc_tizentube_platform_tvos.mm" ]
+  } else {
+    sources += [ "h5vcc_tizentube_platform_default.cc" ]
+  }
 
   deps = [
     "//base",
@@ -26,4 +39,12 @@ source_set("h5vcc_tizentube") {
     "//content/public/browser",
     "//mojo/public/cpp/bindings",
   ]
+
+  if (is_ios && target_platform == "tvos") {
+    deps += [ "//starboard/tvos/shared:starboard_platform" ]
+    frameworks = [
+      "Foundation.framework",
+      "UIKit.framework",
+    ]
+  }
 }

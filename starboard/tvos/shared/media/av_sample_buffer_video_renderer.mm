@@ -21,16 +21,13 @@
 #include "base/apple/foundation_util.h"
 #import "starboard/tvos/shared/defines.h"
 #include "starboard/tvos/shared/media/avutil/utils.h"
+#include "starboard/tvos/shared/media/preferred_display_frame_rate.h"
 #import "starboard/tvos/shared/media/player_manager.h"
 #import "starboard/tvos/shared/starboard_application.h"
 
 static NSString* kAVSBDLStatusKeyPath = @"status";
 static NSString* kAVSBDLOutputObscuredKeyPath =
     @"outputObscuredDueToInsufficientExternalProtection";
-
-// From Apple doc and our experiments, frame rate 1 is the default value and
-// won't make tvOS change the refresh rate.
-constexpr int kDisplayCriteriaDefaultFrameRate = 1;
 
 @interface SBDAVSampleBufferDisplayView : UIView
 @end
@@ -414,12 +411,10 @@ void AVSBVideoRenderer::UpdatePreferredDisplayCriteria() {
   if (avDisplayManager.isDisplayCriteriaMatchingEnabled == YES) {
     NSURL* url = [NSURL URLWithString:kDummyMasterPlaylistUrl];
 
-    // TODO: Support frame rate match if needed. Currently we use default value,
-    // so that tvOS won't change display frame rate.
     SBAVAssetResourceLoaderDelegate* delegate =
         [[SBAVAssetResourceLoaderDelegate alloc]
             initWithTransferId:video_stream_info_.color_metadata.transfer
-                     frameRate:kDisplayCriteriaDefaultFrameRate];
+                     frameRate:GetPreferredDisplayFrameRate()];
     AVURLAsset* asset = [AVURLAsset assetWithURL:url];
     [asset.resourceLoader setDelegate:delegate queue:dispatch_get_main_queue()];
     // Note that any sync inquiry of AVAsset which may trigger resource loader

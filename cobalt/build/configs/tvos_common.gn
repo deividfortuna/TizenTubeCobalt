@@ -5,6 +5,16 @@ target_os = "ios"
 target_platform = "tvos"
 use_blink = true
 
+cobalt_bundle_identifier = "io.gh.reisxd.tizentube.cobalt"
+
+# LLD 21 cannot read the TAPI stubs of the macOS 26 SDK and later, so the host
+# tools and the app link with the ld64 from Xcode.
+use_lld = false
+
+# ld64 warns that the clang package has no libLTO.dylib. The build does not
+# use LTO, so the warning must not stop the link.
+fatal_linker_warnings = false
+
 # This flag comes from ios/features.gni
 # This override can be removed once https://crrev.com/c/6700528 lands in the
 # tree.

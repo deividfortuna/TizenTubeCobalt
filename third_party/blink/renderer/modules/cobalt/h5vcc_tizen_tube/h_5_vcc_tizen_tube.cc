@@ -15,24 +15,21 @@
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/h_5_vcc_tizen_tube.h"
 
 #include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise.h"
-#include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
+#include "third_party/blink/public/platform/task_type.h"
 #include "third_party/blink/renderer/core/dom/dom_exception.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
-#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
-#if BUILDFLAG(IS_ANDROID)
-#include "base/android/jni_android.h"
-#include "base/android/jni_string.h"
-#include "base/android/scoped_java_ref.h"
-#include "starboard/android/shared/starboard_bridge.h"
-#endif  // BUILDFLAG(IS_ANDROID)
 
 namespace blink {
+
+namespace {
+
+constexpr char kServiceUnavailable[] =
+    "Unable to connect to h5vcc_tizentube service";
+
+}  // namespace
 
 H5vccTizenTube::H5vccTizenTube(LocalDOMWindow& window)
     : ExecutionContextLifecycleObserver(window.GetExecutionContext()),
@@ -46,62 +43,78 @@ void H5vccTizenTube::OnConnectionError() {
   service_.reset();
 }
 
-WTF::String H5vccTizenTube::GetVersion(
-    ScriptState* script_state,
-    ExceptionState& exception_state) {
-#if BUILDFLAG(IS_ANDROID)
-  auto* env = base::android::AttachCurrentThread();
-  starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-  std::string version =
-      bridge->GetVersion(env);
-  return String::FromUTF8(version.c_str());
-#else
-  return "";
-#endif // BUILDFLAG(IS_ANDROID)
+bool H5vccTizenTube::InstallAppFromURL(ScriptState* script_state,
+                                       const WTF::String& url,
+                                       ExceptionState& exception_state) {
+  if (!BindOrThrow(exception_state)) {
+    return false;
+  }
+  bool success = false;
+  service_->InstallAppFromURL(url, &success);
+  return success;
 }
 
-WTF::String H5vccTizenTube::GetArchitecture(
-    ScriptState* script_state,
-    ExceptionState& exception_state) {
-#if BUILDFLAG(IS_ANDROID)
-  auto* env = base::android::AttachCurrentThread();
-  starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-  std::string architecture =
-      bridge->GetArchitecture(env);
-  return String::FromUTF8(architecture.c_str());
-#else
-  return "Unknown";
-#endif // BUILDFLAG(IS_ANDROID)
+WTF::String H5vccTizenTube::GetVersion(ScriptState* script_state,
+                                       ExceptionState& exception_state) {
+  if (!BindOrThrow(exception_state)) {
+    return WTF::String();
+  }
+  WTF::String version;
+  service_->GetVersion(&version);
+  return version;
 }
 
-bool H5vccTizenTube::InstallAppFromURL(
-    ScriptState* script_state,
-    const String& url,
-    ExceptionState& exception_state) {
-#if BUILDFLAG(IS_ANDROID)
-  auto* env = base::android::AttachCurrentThread();
-  starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-  bridge->InstallAppFromURL(env, url.Utf8().data());
-  return true;
-#else
-  return false;
-#endif // BUILDFLAG(IS_ANDROID)
+WTF::String H5vccTizenTube::GetArchitecture(ScriptState* script_state,
+                                            ExceptionState& exception_state) {
+  if (!BindOrThrow(exception_state)) {
+    return WTF::String();
+  }
+  WTF::String architecture;
+  service_->GetArchitecture(&architecture);
+  return architecture;
 }
 
 void H5vccTizenTube::SetFrameRate(float frame_rate) {
-#if BUILDFLAG(IS_ANDROID)
-  auto* env = base::android::AttachCurrentThread();
-  starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-  bridge->SetFrameRate(env, frame_rate);
-#endif // BUILDFLAG(IS_ANDROID)
+  if (!EnsureReceiverIsBound()) {
+    return;
+  }
+  service_->SetFrameRate(frame_rate);
 }
 
 void H5vccTizenTube::EnterPIP() {
-  #if BUILDFLAG(IS_ANDROID)
-    auto * env = base::android::AttachCurrentThread();
-    starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-    bridge->EnterPIP(env);
-  #endif // BUILDFLAG(IS_ANDROID)
+  if (!EnsureReceiverIsBound()) {
+    return;
+  }
+  service_->EnterPIP();
+}
+
+bool H5vccTizenTube::SetUserAgent(ScriptState* script_state,
+                                  const WTF::String& user_agent,
+                                  ExceptionState& exception_state) {
+  if (user_agent.empty()) {
+    exception_state.ThrowTypeError("User agent cannot be empty");
+    return false;
+  }
+  if (!BindOrThrow(exception_state)) {
+    return false;
+  }
+  service_->SetUserAgent(user_agent);
+  return true;
+}
+
+bool H5vccTizenTube::HasSystemFeature(ScriptState* script_state,
+                                      const WTF::String& feature_name,
+                                      ExceptionState& exception_state) {
+  if (feature_name.empty()) {
+    exception_state.ThrowTypeError("Feature name cannot be empty");
+    return false;
+  }
+  if (!BindOrThrow(exception_state)) {
+    return false;
+  }
+  bool has_feature = false;
+  service_->HasSystemFeature(feature_name, &has_feature);
+  return has_feature;
 }
 
 bool H5vccTizenTube::EnsureReceiverIsBound() {
@@ -114,7 +127,8 @@ bool H5vccTizenTube::EnsureReceiverIsBound() {
     return false;
   }
 
-  auto task_runner = execution_context->GetTaskRunner(TaskType::kMiscPlatformAPI);
+  auto task_runner =
+      execution_context->GetTaskRunner(TaskType::kMiscPlatformAPI);
   execution_context->GetBrowserInterfaceBroker().GetInterface(
       service_.BindNewPipeAndPassReceiver(task_runner));
   service_.set_disconnect_handler(WTF::BindOnce(
@@ -122,42 +136,13 @@ bool H5vccTizenTube::EnsureReceiverIsBound() {
   return service_.is_bound();
 }
 
-bool H5vccTizenTube::SetUserAgent(
-    ScriptState* script_state,
-    const WTF::String& user_agent,
-    ExceptionState& exception_state) {
-  if (user_agent.IsNull() || user_agent.length() == 0) {
-    exception_state.ThrowTypeError("User agent cannot be empty");
-    return false;
+bool H5vccTizenTube::BindOrThrow(ExceptionState& exception_state) {
+  if (EnsureReceiverIsBound()) {
+    return true;
   }
-
-  if (!EnsureReceiverIsBound()) {
-    exception_state.ThrowDOMException(DOMExceptionCode::kNotSupportedError,
-                                      "Unable to connect to h5vcc_tizentube service");
-    return false;
-  }
-
-  service_->SetUserAgent(user_agent.Utf8().data());
-  return true;
-}
-
-bool H5vccTizenTube::HasSystemFeature(
-    ScriptState* script_state,
-    const WTF::String& feature_name,
-    ExceptionState& exception_state) {
-  if (feature_name.IsNull() || feature_name.length() == 0) {
-    exception_state.ThrowTypeError("Feature name cannot be empty");
-    return false;
-  }
-
-  #ifdef BUILDFLAG(IS_ANDROID)
-    auto* env = base::android::AttachCurrentThread();
-    starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
-    bool has_feature = bridge->HasSystemFeature(env, feature_name.Utf8().data());
-    return has_feature;
-  #else
+  exception_state.ThrowDOMException(DOMExceptionCode::kNotSupportedError,
+                                    kServiceUnavailable);
   return false;
-  #endif // BUILDFLAG(IS_ANDROID)
 }
 
 void H5vccTizenTube::Trace(Visitor* visitor) const {
