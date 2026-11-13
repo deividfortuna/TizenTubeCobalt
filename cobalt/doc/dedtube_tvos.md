@@ -174,7 +174,7 @@ App Store Connect processes the build for some minutes. Then add testers to the 
 
 ## App icon
 
-tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/app/ios/resources/Assets.xcassets/AppIcon.brandassets`. The images are placeholders. Replace the PNG files and keep the sizes:
+tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/app/ios/resources/Assets.xcassets/AppIcon.brandassets`. The app icon has three layers: front, middle, and back. To change an image, replace the PNG file and keep the size:
 
 | Image | Size at 1x | Size at 2x |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/ap
 | Top shelf image | 1920x720 | 3840x1440 |
 | Top shelf image wide | 2320x720 | 4640x1440 |
 
-The back layer must be opaque. The front layer can have transparent areas.
+The back layer must be opaque. The front layer and the middle layer can have transparent areas.
 
 ## Platform differences
 
