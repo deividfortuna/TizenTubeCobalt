@@ -57,10 +57,12 @@ DisplayCALayerTree::~DisplayCALayerTree() {
   ScopedCAActionDisabler disabler;
 
   [maybe_flipped_layer_ removeFromSuperlayer];
-  [remote_layer_ removeFromSuperlayer];
   [io_surface_layer_ removeFromSuperlayer];
-  remote_layer_ = nil;
   io_surface_layer_ = nil;
+#if !BUILDFLAG(IS_IOS_TVOS)
+  [remote_layer_ removeFromSuperlayer];
+  remote_layer_ = nil;
+#endif
 }
 
 void DisplayCALayerTree::UpdateCALayerTree(
@@ -80,11 +82,13 @@ void DisplayCALayerTree::UpdateCALayerTree(
   }
 #endif
 
+#if !BUILDFLAG(IS_IOS_TVOS)
   // Remote layers are the most common case.
   if (ca_layer_params.ca_context_id) {
     GotCALayerFrame(ca_layer_params.ca_context_id);
     return;
   }
+#endif
 
   // IOSurfaces can be sent from software compositing, or if remote layers are
   // manually disabled.
@@ -111,15 +115,16 @@ void DisplayCALayerTree::UpdateCALayerTree(
 
   // If there was an error or if the frame specified nothing, then clear all
   // contents.
-  if (io_surface_layer_ || remote_layer_) {
-    ScopedCAActionDisabler disabler;
-    [io_surface_layer_ removeFromSuperlayer];
-    io_surface_layer_ = nil;
-    [remote_layer_ removeFromSuperlayer];
-    remote_layer_ = nil;
-  }
+  ScopedCAActionDisabler disabler;
+  [io_surface_layer_ removeFromSuperlayer];
+  io_surface_layer_ = nil;
+#if !BUILDFLAG(IS_IOS_TVOS)
+  [remote_layer_ removeFromSuperlayer];
+  remote_layer_ = nil;
+#endif
 }
 
+#if !BUILDFLAG(IS_IOS_TVOS)
 void DisplayCALayerTree::GotCALayerFrame(uint32_t ca_context_id) {
   // Early-out if the remote layer has not changed.
   if (remote_layer_.contextId == ca_context_id) {
@@ -151,6 +156,7 @@ void DisplayCALayerTree::GotCALayerFrame(uint32_t ca_context_id) {
     io_surface_layer_ = nil;
   }
 }
+#endif  // !BUILDFLAG(IS_IOS_TVOS)
 
 void DisplayCALayerTree::GotIOSurfaceFrame(
     base::apple::ScopedCFTypeRef<IOSurfaceRef> io_surface,
@@ -180,11 +186,13 @@ void DisplayCALayerTree::GotIOSurfaceFrame(
     io_surface_layer_.contentsScale = scale_factor;
   }
 
+#if !BUILDFLAG(IS_IOS_TVOS)
   // Ensure that the remote layer be removed.
   if (remote_layer_) {
     [remote_layer_ removeFromSuperlayer];
     remote_layer_ = nil;
   }
+#endif
 }
 
 }  // namespace ui

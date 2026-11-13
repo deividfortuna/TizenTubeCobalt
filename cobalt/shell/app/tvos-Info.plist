@@ -17,9 +17,15 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
+  <string>2.0.0</string>
   <key>CFBundleVersion</key>
-  <string>1.0</string>
+  <string>204</string>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>arm64</string>
+  </array>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsArbitraryLoads</key>
@@ -29,6 +35,10 @@
   <string>LaunchScreen</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>Allow content_shell access to microphone</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>DedTube may use your location to implement Web Platform features.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>DedTube may use Bluetooth to implement Web Platform features.</string>
   <key>NSUserTrackingUsageDescription</key>
   <string>This identifier will be used to deliver personalized ads to you.</string>
   <key>YTApplicationURL</key>
@@ -40,8 +50,7 @@
       <string>${BUNDLE_IDENTIFIER}</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>YouTube</string>
-        <string>YouTubeTV</string>
+        <string>dedtube</string>
       </array>
     </dict>
   </array>

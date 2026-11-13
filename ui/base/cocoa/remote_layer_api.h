@@ -32,7 +32,7 @@ CGSConnectionID CGSMainConnectionID(void);
 // rendering to the process that will be displaying that CALayer.
 typedef uint32_t CAContextID;
 
-#if defined(__OBJC__)
+#if defined(__OBJC__) && !BUILDFLAG(IS_IOS_TVOS)
 
 // The CAContext has a static CAContextID which can be sent to another process.
 // When a CALayerHost is created using that CAContextID in another process, the
@@ -66,7 +66,7 @@ extern NSString* const kCAContextIgnoresHitTest;
 
 #endif  // BUILDFLAG(IS_IOS)
 
-#endif  // __OBJC__
+#endif  // defined(__OBJC__) && !BUILDFLAG(IS_IOS_TVOS)
 
 namespace ui {
 

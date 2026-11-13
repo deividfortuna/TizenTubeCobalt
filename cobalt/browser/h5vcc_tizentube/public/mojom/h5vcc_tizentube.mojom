@@ -15,10 +15,17 @@
 module h5vcc_tizentube.mojom;
 
 interface H5vccTizentube {
+  [Sync]
   InstallAppFromURL(string url) => (bool success);
+  [Sync]
   GetVersion() => (string version);
+  [Sync]
   GetArchitecture() => (string architecture);
+  [Sync]
   GetBrandAndModel() => (string brand_and_model);
   SetFrameRate(float frame_rate);
+  EnterPIP();
   SetUserAgent(string user_agent);
+  [Sync]
+  HasSystemFeature(string feature_name) => (bool has_feature);
 };
