@@ -6,11 +6,11 @@ This document tells you how to build and run DedTube on the Apple TV simulator a
 
 - macOS with Xcode 16 or later and the tvOS SDK.
 - depot_tools on your PATH.
-- A checkout of this repository. The examples use the directory name `src`.
+- A checkout of this repository in a directory with the name `src`. The DEPS hooks use the path `src/`. gclient does not accept a symbolic link for this directory.
 
 ## Set up the checkout
 
-Create the `.gclient` file in the parent directory of the checkout. The `name` value must be the directory name of the checkout.
+Create the `.gclient` file in the parent directory of the checkout.
 
 ```
 solutions = [
@@ -43,6 +43,12 @@ The app bundle is `out/tvos-arm64-simulator_devel/DedTube.app`.
 
 ## Run on the simulator
 
+If `xcrun simctl list runtimes` shows no tvOS runtime, install it:
+
+```
+xcodebuild -downloadPlatform tvOS
+```
+
 List the available simulators and start one:
 
 ```
@@ -62,19 +68,47 @@ Remote DevTools listens on port 9222 inside the simulator. Open `http://localhos
 
 ## Build for a device
 
-A device build needs a code signing identity and a provisioning profile. Generate the output directory, then add the signing arguments to its `args.gn` file:
+A device build needs a code signing identity and a provisioning profile.
+
+The app needs the Extended Virtual Addressing capability. PartitionAlloc reserves large address space pools when the app starts. Without this capability, the app stops with `Check failed` in `partition_address_space.cc` on a device. The simulator does not have this limit. The entitlement is in `cobalt/shell/app/tvos-entitlements.plist`. The provisioning profile must also contain it.
+
+To get a development profile, pair the Apple TV with the Mac in Xcode, Window, Devices and Simulators. Then let Xcode create the profile:
+
+1. Create a tvOS app project in Xcode with the bundle identifier `com.deividfortuna.dedtube`.
+2. Add the Extended Virtual Addressing capability in Signing & Capabilities.
+3. Keep automatic signing on and run the project once on the Apple TV.
+
+Xcode registers the Apple TV and creates "tvOS Team Provisioning Profile: com.deividfortuna.dedtube" in `~/Library/Developer/Xcode/UserData/Provisioning Profiles`.
+
+Find the hash of the development certificate:
+
+```
+security find-identity -v -p codesigning
+```
+
+Generate the output directory, then add the signing arguments to its `args.gn` file:
 
 ```
 cobalt/build/gn.py -p tvos-arm64-device -C devel --no-rbe
 cat >> out/tvos-arm64-device_devel/args.gn <<'EOF'
 ios_code_signing_identity = "<identity hash>"
-ios_mobileprovision_files = [ "//path/to/profile.mobileprovision" ]
+ios_code_signing_identity_description = ""
+ios_mobileprovision_files = [ "/path/to/profile.mobileprovision" ]
 EOF
 gn gen out/tvos-arm64-device_devel
 autoninja -C out/tvos-arm64-device_devel cobalt
 ```
 
-Install the bundle with Xcode or with `xcrun devicectl device install app`.
+## Run on a device
+
+Install and start the app. Use the device name that `xcrun devicectl list devices` shows:
+
+```
+xcrun devicectl device install app --device "<device name>" out/tvos-arm64-device_devel/DedTube.app
+xcrun devicectl device process launch --device "<device name>" --terminate-existing com.deividfortuna.dedtube
+```
+
+Add `--console` to the launch command to show the log. When you stop `devicectl`, the app also stops.
 
 ## Upload to TestFlight
 
@@ -82,9 +116,9 @@ TestFlight needs a release build of the device target, signed for the App Store.
 
 Prepare these items once in the Apple Developer portal and in App Store Connect:
 
-1. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform.
+1. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform. Enable the Extended Virtual Addressing capability on the App ID.
 2. Create an Apple Distribution certificate. Xcode can create it in Settings, Accounts, Manage Certificates.
-3. Create an App Store provisioning profile for tvOS with that App ID and that certificate. Download the `.mobileprovision` file.
+3. Create an App Store provisioning profile for tvOS with that App ID and that certificate. Download the `.mobileprovision` file. If you change the capabilities of the App ID, create the profile again. An old profile does not contain the new entitlements.
 4. Create the app record in App Store Connect with the tvOS platform and the same bundle identifier.
 5. Create an App Store Connect API key with the Developer role. Save the `.p8` file in `~/.appstoreconnect/private_keys/`.
 
