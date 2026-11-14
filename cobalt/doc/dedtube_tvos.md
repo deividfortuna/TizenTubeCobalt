@@ -166,6 +166,8 @@ autoninja -C out/tvos-arm64-device_gold cobalt
 
 Increase `cobalt_bundle_version` in `cobalt/app/tvos/bundle.gni` before each upload. App Store Connect rejects a build number that it already has. The app and the Top Shelf extension get the same build number from this file.
 
+The version is `cobalt_bundle_short_version` in the same file. When you merge an upstream release, set it to the `version_name` value in `cobalt/android/BUILD.gn`. The TizenTube script compares this version with the newest release and shows an update message if it is older.
+
 Package the bundle as an `.ipa` file:
 
 ```
