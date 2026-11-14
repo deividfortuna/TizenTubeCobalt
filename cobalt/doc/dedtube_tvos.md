@@ -74,13 +74,16 @@ The app needs the Extended Virtual Addressing capability. PartitionAlloc reserve
 
 The app and the Top Shelf extension share data through the app group `group.com.deividfortuna.dedtube`. The entitlement is in `cobalt/shell/app/tvos-entitlements.plist` and in `cobalt/app/tvos/top_shelf/entitlements.plist`. The two provisioning profiles must also contain it.
 
+The app and the Top Shelf extension use the User Management capability with the option "Runs as Current User, Only When User-Independent Keychain is Available". The entitlement is in the same two files. The two provisioning profiles must also contain it. A free Apple developer team cannot use this capability.
+
 To get the development profiles, pair the Apple TV with the Mac in Xcode, Window, Devices and Simulators. Then let Xcode create the profiles:
 
 1. Create a tvOS app project in Xcode with the bundle identifier `com.deividfortuna.dedtube`.
 2. Add the Extended Virtual Addressing capability in Signing & Capabilities.
 3. Add the App Groups capability with the group `group.com.deividfortuna.dedtube`.
 4. Add a TV Top Shelf Extension target with the bundle identifier `com.deividfortuna.dedtube.topshelf`. Add the App Groups capability with the same group to this target.
-5. Keep automatic signing on and run the project once on the Apple TV.
+5. Add the User Management capability to the app target and to the extension target. Select only the option "Runs as Current User, Only When User-Independent Keychain is Available".
+6. Keep automatic signing on and run the project once on the Apple TV.
 
 Xcode registers the Apple TV and creates one profile for each bundle identifier in `~/Library/Developer/Xcode/UserData/Provisioning Profiles`.
 
@@ -126,8 +129,8 @@ TestFlight needs a release build of the device target, signed for the App Store.
 Prepare these items once in the Apple Developer portal and in App Store Connect:
 
 1. Register the app group `group.com.deividfortuna.dedtube`.
-2. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform. Enable the Extended Virtual Addressing capability on the App ID. Enable the App Groups capability and select the app group.
-3. Register the bundle identifier `com.deividfortuna.dedtube.topshelf` as an App ID with the tvOS platform. Enable the App Groups capability and select the app group.
+2. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform. Enable the Extended Virtual Addressing capability on the App ID. Enable the App Groups capability and select the app group. Enable the User Management capability.
+3. Register the bundle identifier `com.deividfortuna.dedtube.topshelf` as an App ID with the tvOS platform. Enable the App Groups capability and select the app group. Enable the User Management capability.
 4. Create an Apple Distribution certificate. Xcode can create it in Settings, Accounts, Manage Certificates.
 5. Create one App Store provisioning profile for tvOS for each App ID, with that certificate. Download the two `.mobileprovision` files. If you change the capabilities of an App ID, create its profile again. An old profile does not contain the new entitlements.
 6. Create the app record in App Store Connect with the tvOS platform and the bundle identifier `com.deividfortuna.dedtube`. The Top Shelf extension does not need an app record.
@@ -209,6 +212,30 @@ If the row is empty, tvOS shows the static Top Shelf image.
 | Store | `cobalt/browser/tvos/continue_watching/continue_watching_store.mm` | Keeps the videos in the user defaults of the app group. |
 | Top Shelf extension | `cobalt/app/tvos/top_shelf` | Reads the store and gives the row to tvOS. |
 | Link | `cobalt/browser/tvos/continue_watching/continue_watching_link.mm` | Changes `dedtube://watch?v=<video id>&t=<seconds>` to the YouTube address of the video. |
+
+## Apple TV users
+
+An Apple TV can have more than one user. DedTube runs as the current Apple TV user, and tvOS keeps separate app data for each user. Thus each user has their own YouTube account, their own DedTube settings, and their own Continue Watching data.
+
+- To change the user, hold the TV button on the remote, or go to Settings, Users and Accounts, Switch Current User.
+- When the user changes, tvOS stops DedTube. If DedTube was on the screen, tvOS starts it again.
+- A user who opens DedTube for the first time must sign in to YouTube.
+
+The entitlement `com.apple.developer.user-management` with the value `runs-as-current-user-with-user-independent-keychain` gives this function. It is in `cobalt/shell/app/tvos-entitlements.plist` and in `cobalt/app/tvos/top_shelf/entitlements.plist`.
+
+tvOS selects the data before the app code runs. The app cannot read which Apple TV user is active, and it cannot change the selection.
+
+Test this function on an Apple TV with two or more users.
+
+### Known problem on tvOS 27.2.1
+
+tvOS 27.2.1 does not always select the data of the active user:
+
+- After a user change with DedTube on the screen, tvOS frequently starts DedTube with the data of the previous user. A full close and a new start do not correct this.
+- The first start after an installation with `devicectl` uses the data of the first user.
+- The Top Shelf can show the Continue Watching row of a different user.
+
+A user change on the Home screen, with DedTube in the background, gave the correct data in the tests.
 
 ## App icon
 
