@@ -20,6 +20,8 @@
 #include "base/functional/callback.h"
 #include "build/build_config.h"
 #include "cobalt/browser/h5vcc_runtime/deep_link_manager.h"
+#include "cobalt/shell/common/url_constants.h"  // nogncheck
+#include "content/public/browser/render_frame_host.h"
 
 #if BUILDFLAG(IS_ANDROID)
 #include "starboard/android/shared/starboard_bridge.h"
@@ -44,23 +46,36 @@ void H5vccRuntimeImpl::Create(
   new H5vccRuntimeImpl(*render_frame_host, std::move(receiver));
 }
 
+bool H5vccRuntimeImpl::IsSplashScreen() {
+  return render_frame_host().GetMainFrame()->GetFrameName() ==
+         content::kCobaltSplashMainFrameName;
+}
+
+std::string H5vccRuntimeImpl::TakeInitialDeepLink() {
+  if (IsSplashScreen()) {
+    return std::string();
+  }
+  return cobalt::browser::DeepLinkManager::GetInstance()->GetAndClearDeepLink();
+}
+
 void H5vccRuntimeImpl::GetAndClearInitialDeepLinkSync(
     GetAndClearInitialDeepLinkSyncCallback callback) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  auto* manager = cobalt::browser::DeepLinkManager::GetInstance();
-  std::move(callback).Run(manager->GetAndClearDeepLink());
+  std::move(callback).Run(TakeInitialDeepLink());
 }
 
 void H5vccRuntimeImpl::GetAndClearInitialDeepLink(
     GetAndClearInitialDeepLinkCallback callback) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  auto* manager = cobalt::browser::DeepLinkManager::GetInstance();
-  std::move(callback).Run(manager->GetAndClearDeepLink());
+  std::move(callback).Run(TakeInitialDeepLink());
 }
 
 void H5vccRuntimeImpl::AddListener(
     mojo::PendingRemote<mojom::DeepLinkListener> listener) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  if (IsSplashScreen()) {
+    return;
+  }
   mojo::Remote<mojom::DeepLinkListener> listener_remote;
   listener_remote.Bind(std::move(listener));
 
