@@ -1,0 +1,41 @@
+# Copyright 2026 Reis Can (reisxd). All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/apple/compile_entitlements.gni")
+import("//build/config/ios/rules.gni")
+import("//cobalt/app/tvos/bundle.gni")
+
+compile_entitlements("entitlements") {
+  substitutions = [ "COBALT_APP_GROUP=$cobalt_app_group" ]
+  output_name = "$target_gen_dir/top_shelf.appex.entitlements"
+  entitlements_templates = [ "entitlements.plist" ]
+}
+
+ios_appex_bundle("top_shelf") {
+  output_name = "DedTubeTopShelf"
+
+  sources = [ "top_shelf_content_provider.mm" ]
+
+  deps = [ "//cobalt/browser/tvos/continue_watching:store" ]
+
+  frameworks = [
+    "Foundation.framework",
+    "TVServices.framework",
+  ]
+
+  bundle_identifier = "$cobalt_bundle_identifier.topshelf"
+  entitlements_target = ":entitlements"
+  extra_substitutions = cobalt_bundle_version_substitutions
+  info_plist = "Info.plist"
+}

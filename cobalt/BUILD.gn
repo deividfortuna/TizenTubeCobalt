@@ -26,6 +26,8 @@ if (!toolchain_for_rust_host_build_tools) {
 
 if (is_ios) {
   import("//build/config/apple/mobile_config.gni")
+  import("//build/ios/extension_bundle_data.gni")
+  import("//cobalt/app/tvos/bundle.gni")
 }
 
 # This arg temporarily enables or disables the updater_sandbox target.
@@ -35,9 +37,6 @@ declare_args() {
   build_updater_sandbox = false
 
   if (is_ios && target_platform == "tvos") {
-    # tvOS: Default app bundle identifier.
-    cobalt_bundle_identifier = "dev.cobalt.tvos"
-
     # tvOS: Default Info.plist path for the bundle.
     cobalt_info_plist = "//cobalt/shell/app/tvos-Info.plist"
   }
@@ -121,6 +120,12 @@ group("cobalt_browsertests") {
 }
 
 if (is_ios && target_platform == "tvos") {
+  extension_bundle_data("top_shelf_extension_bundle") {
+    extension_name = "DedTubeTopShelf.appex"
+    extension_target =
+        "//cobalt/app/tvos/top_shelf(${default_toolchain}_app_ext)"
+  }
+
   ios_app_bundle("cobalt") {
     testonly = true
     output_name = "DedTube"
@@ -131,6 +136,7 @@ if (is_ios && target_platform == "tvos") {
       ":common",
       "//base",
       "//cobalt/browser/tvos:plist_info",
+      "//cobalt/browser/tvos/continue_watching:store",
       "//cobalt/browser/tvos/intents:yt_intents",
       "//cobalt/shell:cobalt_shell_app",
       "//cobalt/shell:cobalt_shell_lib",
@@ -140,6 +146,7 @@ if (is_ios && target_platform == "tvos") {
     ]
     bundle_deps = [
       ":cobalt_shell_framework_resources",
+      ":top_shelf_extension_bundle",
       "shell/app/ios/resources",
     ]
 
@@ -149,6 +156,7 @@ if (is_ios && target_platform == "tvos") {
 
     bundle_identifier = cobalt_bundle_identifier
     entitlements_path = "//cobalt/shell/app/tvos-entitlements.plist"
+    extra_substitutions = cobalt_bundle_version_substitutions
     info_plist = cobalt_info_plist
   }
 
@@ -165,6 +173,7 @@ if (is_ios && target_platform == "tvos") {
       ":common",
       "//base",
       "//cobalt/browser/tvos:plist_info",
+      "//cobalt/browser/tvos/continue_watching:store",
       "//cobalt/browser/tvos/intents:yt_intents",
       "//cobalt/shell:cobalt_shell_lib",
       "//components/crash/core/app",

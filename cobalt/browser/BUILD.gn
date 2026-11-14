@@ -148,6 +148,7 @@ source_set("browser") {
     deps += [
       "//cobalt/browser:cobalt_crash_annotations",
       "//cobalt/browser/tvos:network_error_handler",
+      "//cobalt/browser/tvos/continue_watching:recorder",
     ]
   }
 

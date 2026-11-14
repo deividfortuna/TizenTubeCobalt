@@ -68,17 +68,21 @@ Remote DevTools listens on port 9222 inside the simulator. Open `http://localhos
 
 ## Build for a device
 
-A device build needs a code signing identity and a provisioning profile.
+A device build needs a code signing identity and two provisioning profiles. One profile is for the app. The other profile is for the Top Shelf extension, which has the bundle identifier `com.deividfortuna.dedtube.topshelf`.
 
-The app needs the Extended Virtual Addressing capability. PartitionAlloc reserves large address space pools when the app starts. Without this capability, the app stops with `Check failed` in `partition_address_space.cc` on a device. The simulator does not have this limit. The entitlement is in `cobalt/shell/app/tvos-entitlements.plist`. The provisioning profile must also contain it.
+The app needs the Extended Virtual Addressing capability. PartitionAlloc reserves large address space pools when the app starts. Without this capability, the app stops with `Check failed` in `partition_address_space.cc` on a device. The simulator does not have this limit. The entitlement is in `cobalt/shell/app/tvos-entitlements.plist`. The provisioning profile of the app must also contain it.
 
-To get a development profile, pair the Apple TV with the Mac in Xcode, Window, Devices and Simulators. Then let Xcode create the profile:
+The app and the Top Shelf extension share data through the app group `group.com.deividfortuna.dedtube`. The entitlement is in `cobalt/shell/app/tvos-entitlements.plist` and in `cobalt/app/tvos/top_shelf/entitlements.plist`. The two provisioning profiles must also contain it.
+
+To get the development profiles, pair the Apple TV with the Mac in Xcode, Window, Devices and Simulators. Then let Xcode create the profiles:
 
 1. Create a tvOS app project in Xcode with the bundle identifier `com.deividfortuna.dedtube`.
 2. Add the Extended Virtual Addressing capability in Signing & Capabilities.
-3. Keep automatic signing on and run the project once on the Apple TV.
+3. Add the App Groups capability with the group `group.com.deividfortuna.dedtube`.
+4. Add a TV Top Shelf Extension target with the bundle identifier `com.deividfortuna.dedtube.topshelf`. Add the App Groups capability with the same group to this target.
+5. Keep automatic signing on and run the project once on the Apple TV.
 
-Xcode registers the Apple TV and creates "tvOS Team Provisioning Profile: com.deividfortuna.dedtube" in `~/Library/Developer/Xcode/UserData/Provisioning Profiles`.
+Xcode registers the Apple TV and creates one profile for each bundle identifier in `~/Library/Developer/Xcode/UserData/Provisioning Profiles`.
 
 Find the hash of the development certificate:
 
@@ -93,11 +97,16 @@ cobalt/build/gn.py -p tvos-arm64-device -C devel --no-rbe
 cat >> out/tvos-arm64-device_devel/args.gn <<'EOF'
 ios_code_signing_identity = "<identity hash>"
 ios_code_signing_identity_description = ""
-ios_mobileprovision_files = [ "/path/to/profile.mobileprovision" ]
+ios_mobileprovision_files = [
+  "/path/to/app_profile.mobileprovision",
+  "/path/to/top_shelf_profile.mobileprovision",
+]
 EOF
 gn gen out/tvos-arm64-device_devel
 autoninja -C out/tvos-arm64-device_devel cobalt
 ```
+
+The build selects the profile that agrees with each bundle identifier.
 
 ## Run on a device
 
@@ -116,11 +125,13 @@ TestFlight needs a release build of the device target, signed for the App Store.
 
 Prepare these items once in the Apple Developer portal and in App Store Connect:
 
-1. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform. Enable the Extended Virtual Addressing capability on the App ID.
-2. Create an Apple Distribution certificate. Xcode can create it in Settings, Accounts, Manage Certificates.
-3. Create an App Store provisioning profile for tvOS with that App ID and that certificate. Download the `.mobileprovision` file. If you change the capabilities of the App ID, create the profile again. An old profile does not contain the new entitlements.
-4. Create the app record in App Store Connect with the tvOS platform and the same bundle identifier.
-5. Create an App Store Connect API key with the Developer role. Save the `.p8` file in `~/.appstoreconnect/private_keys/`.
+1. Register the app group `group.com.deividfortuna.dedtube`.
+2. Register the bundle identifier `com.deividfortuna.dedtube` as an App ID with the tvOS platform. Enable the Extended Virtual Addressing capability on the App ID. Enable the App Groups capability and select the app group.
+3. Register the bundle identifier `com.deividfortuna.dedtube.topshelf` as an App ID with the tvOS platform. Enable the App Groups capability and select the app group.
+4. Create an Apple Distribution certificate. Xcode can create it in Settings, Accounts, Manage Certificates.
+5. Create one App Store provisioning profile for tvOS for each App ID, with that certificate. Download the two `.mobileprovision` files. If you change the capabilities of an App ID, create its profile again. An old profile does not contain the new entitlements.
+6. Create the app record in App Store Connect with the tvOS platform and the bundle identifier `com.deividfortuna.dedtube`. The Top Shelf extension does not need an app record.
+7. Create an App Store Connect API key with the Developer role. Save the `.p8` file in `~/.appstoreconnect/private_keys/`.
 
 Find the hash of the distribution certificate:
 
@@ -137,20 +148,23 @@ gn gen out/tvos-arm64-device_gold
 autoninja -C out/tvos-arm64-device_gold cobalt
 ```
 
-When the certificate and the profile are installed, turn code signing on. Only the bundle steps run again:
+When the certificate and the profiles are installed, turn code signing on. Only the bundle steps run again:
 
 ```
 sed -i '' '/ios_enable_code_signing/d' out/tvos-arm64-device_gold/args.gn
 cat >> out/tvos-arm64-device_gold/args.gn <<'EOF'
 ios_code_signing_identity = "<Apple Distribution hash>"
 ios_code_signing_identity_description = ""
-ios_mobileprovision_files = [ "/path/to/DedTube_AppStore.mobileprovision" ]
+ios_mobileprovision_files = [
+  "/path/to/DedTube_AppStore.mobileprovision",
+  "/path/to/DedTube_TopShelf_AppStore.mobileprovision",
+]
 EOF
 gn gen out/tvos-arm64-device_gold
 autoninja -C out/tvos-arm64-device_gold cobalt
 ```
 
-Increase `CFBundleVersion` in `cobalt/shell/app/tvos-Info.plist` before each upload. App Store Connect rejects a build number that it already has.
+Increase `cobalt_bundle_version` in `cobalt/app/tvos/bundle.gni` before each upload. App Store Connect rejects a build number that it already has. The app and the Top Shelf extension get the same build number from this file.
 
 Package the bundle as an `.ipa` file:
 
@@ -171,6 +185,28 @@ xcrun altool --upload-app -t appletvos -f DedTube.ipa --apiKey <key id> --apiIss
 The Transporter app from the Mac App Store can upload the same `.ipa` file without an API key.
 
 App Store Connect processes the build for some minutes. Then add testers to the build in the TestFlight tab.
+
+## Continue Watching in the Top Shelf
+
+When DedTube is in the top row of the Home screen and has the focus, the Top Shelf shows a "Continue Watching" row. Each item shows the thumbnail and the playback progress of a video. When you select an item, DedTube opens the video at the saved position.
+
+The app saves the position of a video during playback. These rules apply:
+
+- The app saves a video when the position is 30 seconds or more.
+- The app removes a video when the position is 95% of the duration or more.
+- The row keeps the 10 most recent videos.
+- The app does not save live streams.
+
+The row shows only the videos that you watch in DedTube on this Apple TV. It does not read the watch history of the YouTube account.
+
+If the row is empty, tvOS shows the static Top Shelf image.
+
+| Part | Location | Function |
+| --- | --- | --- |
+| Recorder | `cobalt/browser/tvos/continue_watching/continue_watching_recorder.mm` | Reads the video, the title, and the position from the page and its media session. |
+| Store | `cobalt/browser/tvos/continue_watching/continue_watching_store.mm` | Keeps the videos in the user defaults of the app group. |
+| Top Shelf extension | `cobalt/app/tvos/top_shelf` | Reads the store and gives the row to tvOS. |
+| Link | `cobalt/browser/tvos/continue_watching/continue_watching_link.mm` | Changes `dedtube://watch?v=<video id>&t=<seconds>` to the YouTube address of the video. |
 
 ## App icon
 

@@ -17,9 +17,9 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>2.0.0</string>
+  <string>${COBALT_BUNDLE_SHORT_VERSION}</string>
   <key>CFBundleVersion</key>
-  <string>205</string>
+  <string>${COBALT_BUNDLE_VERSION}</string>
   <key>ITSAppUsesNonExemptEncryption</key>
   <false/>
   <key>UIRequiredDeviceCapabilities</key>

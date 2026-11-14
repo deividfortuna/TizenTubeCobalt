@@ -29,6 +29,7 @@
 #include "cobalt/app/cobalt_main_delegate.h"
 #include "cobalt/app/cobalt_switch_defaults.h"
 #include "cobalt/browser/h5vcc_runtime/deep_link_manager.h"
+#import "cobalt/browser/tvos/continue_watching/continue_watching_link.h"
 #include "cobalt/browser/tvos/plist_info.h"
 #include "cobalt/shell/browser/shell.h"
 #include "components/crash/core/app/crashpad.h"
@@ -65,6 +66,7 @@ static const char** g_argv = nullptr;
   if (!url) {
     return;
   }
+  url = [ContinueWatchingLink youTubeURLForLink:url] ?: url;
 
   GURL parsedURL = net::GURLWithNSURL(url);
 
