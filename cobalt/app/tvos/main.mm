@@ -35,20 +35,26 @@
 #include "components/crash/core/app/crashpad.h"
 #include "content/public/app/content_main.h"
 #include "content/public/app/content_main_runner.h"
+#include "content/public/browser/media_session.h"
 #include "content/public/browser/render_view_host.h"
 #include "content/public/browser/render_widget_host.h"
 #include "net/base/apple/url_conversions.h"
 #include "starboard/common/command_line.h"
 #include "starboard/common/time.h"
 #include "starboard/tvos/shared/application_darwin.h"
+#import "starboard/tvos/shared/media/picture_in_picture.h"
 
 static int g_argc = 0;
 static const char** g_argv = nullptr;
 
-@interface CobaltAppSceneDelegate : UIResponder <UIWindowSceneDelegate>
+@interface CobaltAppSceneDelegate
+    : UIResponder <UIWindowSceneDelegate, SBDPictureInPictureDelegate>
 @end
 
-@implementation CobaltAppSceneDelegate
+@implementation CobaltAppSceneDelegate {
+  BOOL _isBlurPending;
+  BOOL _isConcealPending;
+}
 
 - (content::WebContents*)getWebContents {
   CHECK_EQ(1u, content::Shell::windows().size());
@@ -92,6 +98,8 @@ static const char** g_argv = nullptr;
   window.rootViewController = controller;
   [window makeKeyAndVisible];
 
+  SBDPictureInPicture.sharedInstance.delegate = self;
+
   // Handle deep link when the app is launched (cold start). The URL is
   // delivered via connectionOptions.
   [self handleDeepLink:connectionOptions.URLContexts];
@@ -105,6 +113,8 @@ static const char** g_argv = nullptr;
 }
 
 - (void)sceneWillEnterForeground:(UIScene*)scene {
+  _isBlurPending = NO;
+  _isConcealPending = NO;
   content::WebContents* web_contents = [self getWebContents];
   // A visible page is automatically unfrozen and it should not call
   // `SetPageFrozen`.
@@ -133,21 +143,59 @@ static const char** g_argv = nullptr;
         }));
   });
 
+  _isBlurPending = NO;
   content::WebContents* web_contents = [self getWebContents];
   web_contents->GetRenderViewHost()->GetWidget()->Focus();
 }
 
 - (void)sceneWillResignActive:(UIScene*)scene {
+  _isBlurPending = SBDPictureInPicture.sharedInstance.isRunning;
+  if (!_isBlurPending) {
+    [self blurWebContents];
+  }
+}
+
+- (void)sceneDidEnterBackground:(UIScene*)scene {
+  _isConcealPending = SBDPictureInPicture.sharedInstance.isRunning;
+  if (!_isConcealPending) {
+    [self concealWebContents];
+  }
+}
+
+- (void)blurWebContents {
   content::WebContents* web_contents = [self getWebContents];
   web_contents->GetRenderViewHost()->GetWidget()->Blur();
 }
 
-- (void)sceneDidEnterBackground:(UIScene*)scene {
+- (void)concealWebContents {
   content::WebContents* web_contents = [self getWebContents];
   web_contents->UpdateWebContentsVisibility(content::Visibility::HIDDEN);
   // Freeze the page when entering background, triggering `document.onfreeze`
   // event in JavaScript.
   web_contents->SetPageFrozen(true);
+}
+
+#pragma mark - SBDPictureInPictureDelegate
+
+- (void)pictureInPictureDidEnd {
+  if (_isBlurPending) {
+    [self blurWebContents];
+  }
+  if (_isConcealPending) {
+    [self concealWebContents];
+  }
+  _isBlurPending = NO;
+  _isConcealPending = NO;
+}
+
+- (void)pictureInPictureSetPlaying:(BOOL)playing {
+  content::MediaSession* media_session =
+      content::MediaSession::Get([self getWebContents]);
+  if (playing) {
+    media_session->Resume(content::MediaSession::SuspendType::kUI);
+  } else {
+    media_session->Suspend(content::MediaSession::SuspendType::kUI);
+  }
 }
 @end
 
