@@ -125,6 +125,8 @@ static_library("starboard_platform") {
     "media/drm_manager.h",
     "media/drm_manager.mm",
     "media/drm_system_platform.h",
+    "media/picture_in_picture.h",
+    "media/picture_in_picture.mm",
     "media/playback_capabilities.h",
     "media/playback_capabilities.mm",
     "media/player_components_factory.mm",
