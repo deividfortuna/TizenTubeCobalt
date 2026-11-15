@@ -122,7 +122,8 @@ bool MediaIsVideoSupported(SbMediaVideoCodec video_codec,
         return false;
       }
 #else
-      return false;
+      const bool fits_in_4k = frame_height <= 2160 && frame_width <= 3840;
+      return PlaybackCapabilities::IsHwVp9Supported() && fits_in_4k;
 #endif  // defined(COBALT_INTERNAL_BUILD)
     }
 

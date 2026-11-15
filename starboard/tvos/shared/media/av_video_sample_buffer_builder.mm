@@ -18,6 +18,7 @@
 
 #import "starboard/tvos/shared/media/avc_av_video_sample_buffer_builder.h"
 #import "starboard/tvos/shared/media/playback_capabilities.h"
+#import "starboard/tvos/shared/media/vp9_hw_av_video_sample_buffer_builder.h"
 #import "starboard/tvos/shared/media/vp9_sw_av_video_sample_buffer_builder.h"  // nogncheck
 
 #if defined(COBALT_INTERNAL_BUILD)
@@ -35,6 +36,10 @@ AVVideoSampleBufferBuilder* AVVideoSampleBufferBuilder::CreateBuilder(
 #if defined(COBALT_INTERNAL_BUILD)
     if (PlaybackCapabilities::IsHwVp9Supported()) {
       return new HwAVVideoSampleBufferBuilder(video_stream_info);
+    }
+#else
+    if (PlaybackCapabilities::IsHwVp9Supported()) {
+      return new Vp9HwAVVideoSampleBufferBuilder();
     }
 #endif  // defined(COBALT_INTERNAL_BUILD)
     return new Vp9SwAVVideoSampleBufferBuilder(video_stream_info);

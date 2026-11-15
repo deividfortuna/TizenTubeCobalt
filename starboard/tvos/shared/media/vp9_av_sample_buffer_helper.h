@@ -18,12 +18,18 @@
 #import <AVFoundation/AVFoundation.h>
 
 #import "starboard/media.h"
+#include "starboard/shared/starboard/media/media_util.h"
 
 namespace starboard {
 
 const float kGammaLevel22 = 2.2f;
 const float kGammaLevel24 = 2.4f;
 const float kGammaLevel28 = 2.8f;
+
+bool IsHdrVideo(const VideoStreamInfo& video_stream_info);
+
+void SetHdrColorProperties(CFMutableDictionaryRef properties,
+                           const SbMediaColorMetadata& color_metadata);
 
 // LightLevelInfoSEI should in big endian.
 struct LightLevelInfoSEI {

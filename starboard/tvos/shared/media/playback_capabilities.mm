@@ -36,6 +36,13 @@ namespace {
 
 const CMVideoCodecType kCMVideoCodecType_VP9 = 'vp09';
 
+bool IsHwVp9SupportedPriv() {
+  if (@available(tvOS 26.2, *)) {
+    VTRegisterSupplementalVideoDecoderIfAvailable(kCMVideoCodecType_VP9);
+  }
+  return VTIsHardwareDecodeSupported(kCMVideoCodecType_VP9);
+}
+
 bool IsAppleTVHDPriv() {
   const std::string model =
       starboard::GetSystemPropertyString(kSbSystemPropertyModelName);
@@ -97,12 +104,13 @@ SbMediaAudioConnector GetConnectorFromAVAudioSessionPort(
 class PlaybackCapabilitiesImpl {
  public:
   PlaybackCapabilitiesImpl()
-      : is_hw_vp9_supported_(
-            VTIsHardwareDecodeSupported(kCMVideoCodecType_VP9)),
+      : is_hw_vp9_supported_(IsHwVp9SupportedPriv()),
         is_hw_av1_supported_(
             VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)),
         is_apple_tv_hd_(IsAppleTVHDPriv()),
         is_apple_tv_4k_(IsAppleTV4KPriv()) {
+    SB_LOG(INFO) << "Hardware decode support: VP9 " << is_hw_vp9_supported_
+                 << ", AV1 " << is_hw_av1_supported_;
     ObserverRegistry::RegisterObserver(&observer_);
     @autoreleasepool {
       route_change_observer_ = [[NSNotificationCenter defaultCenter]
