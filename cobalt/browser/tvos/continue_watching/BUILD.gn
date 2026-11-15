@@ -35,6 +35,8 @@ source_set("recorder") {
     "continue_watching_recorder.mm",
   ]
 
+  public_deps = [ "//cobalt/browser/tvos:media_session_artwork" ]
+
   deps = [
     ":store",
     "//base",
@@ -43,7 +45,6 @@ source_set("recorder") {
     "//net",
     "//services/media_session/public/cpp",
     "//services/media_session/public/mojom",
-    "//ui/gfx/geometry",
     "//url",
   ]
 

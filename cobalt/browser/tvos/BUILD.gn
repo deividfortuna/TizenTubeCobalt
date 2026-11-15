@@ -36,6 +36,21 @@ source_set("deep_link_support_tvos") {
   frameworks = [ "Foundation.framework" ]
 }
 
+source_set("media_session_artwork") {
+  sources = [
+    "media_session_artwork.cc",
+    "media_session_artwork.h",
+  ]
+
+  public_deps = [
+    "//base",
+    "//services/media_session/public/cpp",
+    "//services/media_session/public/mojom",
+  ]
+
+  deps = [ "//ui/gfx/geometry" ]
+}
+
 source_set("network_error_handler") {
   visibility = [ "//cobalt/browser" ]
   sources = [

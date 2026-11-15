@@ -149,6 +149,7 @@ source_set("browser") {
       "//cobalt/browser:cobalt_crash_annotations",
       "//cobalt/browser/tvos:network_error_handler",
       "//cobalt/browser/tvos/continue_watching:recorder",
+      "//cobalt/browser/tvos/now_playing:publisher",
     ]
   }
 

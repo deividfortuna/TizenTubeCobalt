@@ -210,6 +210,27 @@ If the row is empty, tvOS shows the static Top Shelf image.
 | Top Shelf extension | `cobalt/app/tvos/top_shelf` | Reads the store and gives the row to tvOS. |
 | Link | `cobalt/browser/tvos/continue_watching/continue_watching_link.mm` | Changes `dedtube://watch?v=<video id>&t=<seconds>` to the YouTube address of the video. |
 
+## Now Playing
+
+During playback, DedTube gives the video to the Now Playing function of tvOS. Control Center and the Home app then show the title, the channel, the thumbnail, and the playback position.
+
+Other devices can also control the playback through Now Playing. These commands are available when the YouTube page supports them:
+
+- Play and pause.
+- Next video and previous video.
+- Skip 10 seconds forward or backward.
+- Go to a position in the video.
+
+When the playback stops, DedTube removes the video from Now Playing.
+
+DedTube sends a skip command to the page as a seek to the position 10 seconds away. The YouTube page only shows a paused preview when it gets a seek command without a position.
+
+When DedTube comes back from the Home screen without a link, the YouTube page gives the title again but does not give the thumbnail. DedTube then uses the thumbnail that the same title had before.
+
+| Part | Location | Function |
+| --- | --- | --- |
+| Publisher | `cobalt/browser/tvos/now_playing/now_playing_publisher.mm` | Reads the media session of the page, gives the data to `MPNowPlayingInfoCenter`, and sends the commands from `MPRemoteCommandCenter` to the page. |
+
 ## App icon
 
 tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/app/ios/resources/Assets.xcassets/AppIcon.brandassets`. The app icon has three layers: front, middle, and back. To change an image, replace the PNG file and keep the size:

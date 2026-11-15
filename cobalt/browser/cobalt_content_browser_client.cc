@@ -101,6 +101,7 @@
 
 #if BUILDFLAG(IS_IOS_TVOS)
 #include "cobalt/browser/tvos/continue_watching/continue_watching_recorder.h"
+#include "cobalt/browser/tvos/now_playing/now_playing_publisher.h"
 #endif  // BUILDFLAG(IS_IOS_TVOS)
 
 #if !BUILDFLAG(IS_ANDROIDTV)
@@ -537,6 +538,7 @@ void CobaltContentBrowserClient::OnWebContentsCreated(
   web_contents_observer_.reset(new CobaltWebContentsObserver(web_contents));
 #if BUILDFLAG(IS_IOS_TVOS)
   ContinueWatchingRecorder::CreateForWebContents(web_contents);
+  NowPlayingPublisher::CreateForWebContents(web_contents);
 #endif  // BUILDFLAG(IS_IOS_TVOS)
   // Initialize the lifecycle tracker for this WebContents to ensure we track
   // and register its frames (including the main frame) for lifecycle events

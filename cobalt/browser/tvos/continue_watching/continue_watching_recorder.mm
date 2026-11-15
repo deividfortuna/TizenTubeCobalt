@@ -18,20 +18,18 @@
 #import <TVServices/TVServices.h>
 #import <UIKit/UIKit.h>
 
-#include <algorithm>
-
 #include "base/functional/bind.h"
 #include "base/strings/strcat.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/time/time.h"
 #import "cobalt/browser/tvos/continue_watching/continue_watching_entry.h"
 #import "cobalt/browser/tvos/continue_watching/continue_watching_store.h"
+#include "cobalt/browser/tvos/media_session_artwork.h"
 #include "content/public/browser/media_session.h"
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/web_contents.h"
 #include "net/base/apple/url_conversions.h"
 #include "net/base/url_util.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace cobalt {
 
@@ -50,19 +48,6 @@ std::string WatchedVideoId(const GURL& page_url) {
     net::GetValueForKeyInQuery(route, kVideoIdParameter, &video_id);
   }
   return video_id;
-}
-
-int LargestArea(const media_session::MediaImage& image) {
-  int largest_area = 0;
-  for (const gfx::Size& size : image.sizes) {
-    largest_area = std::max(largest_area, size.GetArea());
-  }
-  return largest_area;
-}
-
-GURL LargestImageUrl(const std::vector<media_session::MediaImage>& images) {
-  const auto largest = std::ranges::max_element(images, {}, &LargestArea);
-  return largest == images.end() ? GURL() : largest->src;
 }
 
 }  // namespace
@@ -127,10 +112,9 @@ void ContinueWatchingRecorder::MediaSessionActionsChanged(
 void ContinueWatchingRecorder::MediaSessionImagesChanged(
     const base::flat_map<media_session::mojom::MediaSessionImageType,
                          std::vector<media_session::MediaImage>>& images) {
-  const auto artwork =
-      images.find(media_session::mojom::MediaSessionImageType::kArtwork);
-  artwork_url_ =
-      artwork == images.end() ? GURL() : LargestImageUrl(artwork->second);
+  const std::optional<media_session::MediaImage> artwork =
+      LargestArtwork(images);
+  artwork_url_ = artwork ? artwork->src : GURL();
   SaveProgress();
 }
 
