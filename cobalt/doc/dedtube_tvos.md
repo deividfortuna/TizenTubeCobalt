@@ -231,6 +231,25 @@ When DedTube comes back from the Home screen without a link, the YouTube page gi
 | --- | --- | --- |
 | Publisher | `cobalt/browser/tvos/now_playing/now_playing_publisher.mm` | Reads the media session of the page, gives the data to `MPNowPlayingInfoCenter`, and sends the commands from `MPRemoteCommandCenter` to the page. |
 
+## Siri Remote ring
+
+A circle with the finger on the clickpad ring moves the playback position. A clockwise circle moves it forward and a counterclockwise circle moves it back. A full circle is 90 seconds. Push the center of the clickpad to confirm the position.
+
+On an Apple TV, DedTube gets the finger position from the game controller interface and sends it to the YouTube page as touch events. The page reads only the horizontal movement, so it cannot follow a circle. DedTube finds the rotation before the page gets the touch:
+
+- A touch becomes a rotation when the finger turns 45 degrees around the center and stays out of the center area.
+- During a rotation, the page gets no touch events. For each 20 degrees, DedTube sends a Right key for a clockwise turn or a Left key for a counterclockwise turn.
+- In the player, each key moves the scrub bar 5 seconds.
+
+A swipe goes through the center area, so it stays a touch. The center area has a radius of 0.4, where 1 is the edge of the clickpad. The limits come from recorded touches of a Siri Remote: the swipes turned 13 degrees or less, and the finger on the ring stayed at a distance of 0.48 or more from the center.
+
+The simulator has no game controller for the remote, so it does not use this code.
+
+| Part | Location | Function |
+| --- | --- | --- |
+| Rotation | `content/browser/renderer_host/siri_remote_ring_rotation.cc` | Calculates the rotation steps from the finger positions. |
+| Touch input | `content/browser/renderer_host/render_widget_host_view_tvos_uiview.mm` | Sends the keys and stops the touch events during a rotation. |
+
 ## App icon
 
 tvOS needs a layered app icon and top shelf images. They are in `cobalt/shell/app/ios/resources/Assets.xcassets/AppIcon.brandassets`. The app icon has three layers: front, middle, and back. To change an image, replace the PNG file and keep the size:
