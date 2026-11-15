@@ -16,6 +16,7 @@
 
 #include <functional>
 
+#import "starboard/tvos/shared/media/av1_hw_av_video_sample_buffer_builder.h"
 #import "starboard/tvos/shared/media/avc_av_video_sample_buffer_builder.h"
 #import "starboard/tvos/shared/media/playback_capabilities.h"
 #import "starboard/tvos/shared/media/vp9_hw_av_video_sample_buffer_builder.h"
@@ -47,6 +48,10 @@ AVVideoSampleBufferBuilder* AVVideoSampleBufferBuilder::CreateBuilder(
 #if defined(COBALT_INTERNAL_BUILD)
     if (PlaybackCapabilities::IsHwAv1Supported()) {
       return new HwAVVideoSampleBufferBuilder(video_stream_info);
+    }
+#else
+    if (PlaybackCapabilities::IsHwAv1Supported()) {
+      return new Av1HwAVVideoSampleBufferBuilder();
     }
 #endif  // defined(COBALT_INTERNAL_BUILD)
   }

@@ -15,28 +15,20 @@
 #ifndef STARBOARD_TVOS_SHARED_MEDIA_VP9_HW_AV_VIDEO_SAMPLE_BUFFER_BUILDER_H_
 #define STARBOARD_TVOS_SHARED_MEDIA_VP9_HW_AV_VIDEO_SAMPLE_BUFFER_BUILDER_H_
 
-#include "base/apple/scoped_cftyperef.h"
-#import "starboard/tvos/shared/media/av_video_sample_buffer_builder.h"
+#include <optional>
+
+#import "starboard/tvos/shared/media/compressed_av_video_sample_buffer_builder.h"
 
 namespace starboard {
 
-class Vp9HwAVVideoSampleBufferBuilder : public AVVideoSampleBufferBuilder {
+class Vp9HwAVVideoSampleBufferBuilder
+    : public CompressedAVVideoSampleBufferBuilder {
  public:
   Vp9HwAVVideoSampleBufferBuilder() = default;
-  void Reset() override;
-  void WriteInputBuffer(const scoped_refptr<InputBuffer>& input_buffer,
-                        int64_t media_time_offset) override;
-  void WriteEndOfStream() override {}
-  size_t GetPrerollFrameCount() const override { return 16; }
-  bool IsSampleAlreadyDecoded() const override { return false; }
-  int64_t DecodingTimeNeededPerFrame() const override;
-  size_t GetMaxNumberOfCachedFrames() const override { return 128; }
 
- private:
-  bool EnsureFormatDescription(const InputBuffer& input_buffer);
-  bool RefreshFormatDescription(const InputBuffer& key_frame);
-
-  base::apple::ScopedCFTypeRef<CMFormatDescriptionRef> format_description_;
+ protected:
+  std::optional<CodecConfiguration> ParseCodecConfiguration(
+      const InputBuffer& key_frame) override;
 };
 
 }  // namespace starboard

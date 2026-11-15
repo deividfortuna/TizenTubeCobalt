@@ -128,12 +128,10 @@ bool MediaIsVideoSupported(SbMediaVideoCodec video_codec,
     }
 
     if (video_codec == kSbMediaVideoCodecAv1) {
-#if defined(COBALT_INTERNAL_BUILD)
       if (PlaybackCapabilities::IsHwAv1Supported()) {
         // Cap resolution to 4k for AV1 implementation verification.
         return frame_height <= 2160 && frame_width <= 3840;
       }
-#endif  // defined(COBALT_INTERNAL_BUILD)
     }
   }  // @autoreleasepool
 
