@@ -19,7 +19,7 @@ declare_args() {
 
 cobalt_app_group = "group.$cobalt_bundle_identifier"
 
-cobalt_bundle_version = "209"
+cobalt_bundle_version = "210"
 cobalt_bundle_short_version = "2.0.3"
 
 cobalt_bundle_version_substitutions = [
