@@ -4,6 +4,7 @@
 
 #include "content/browser/renderer_host/render_widget_host_view_tvos_uiview.h"
 
+#include <cstdlib>
 #include <map>
 #include <memory>
 #include <variant>
@@ -26,6 +27,7 @@
 #import <GameController/GameController.h>
 
 #include "components/input/web_input_event_builders_ios.h"
+#include "content/browser/renderer_host/siri_remote_ring_rotation.h"
 #endif
 
 static void* kObservingContext = &kObservingContext;
@@ -125,6 +127,7 @@ BOOL RemoteButtonSupportsAutoRepeat(RemoteButton button) {
   NSMutableSet<GCController*>* _gameControllers;
   CGPoint _lastSiriRemoteGamepadLocation;
   BOOL _isBeingTouched;
+  content::SiriRemoteRingRotation _ringRotation;
 #endif
   // Maps a held button to the timer currently driving its auto-repeat: a
   // `base::OneShotTimer` while counting down the initial
@@ -770,6 +773,7 @@ BOOL RemoteButtonSupportsAutoRepeat(RemoteButton button) {
 // Stops listening to inputs from the given controller.
 - (void)stopListeningToInputForController:(GCController*)controller {
   [_gameControllers removeObject:controller];
+  _ringRotation.LiftFinger();
   // Reset touch state so a reconnected controller starts fresh.
   _isBeingTouched = NO;
 }
@@ -798,6 +802,10 @@ BOOL RemoteButtonSupportsAutoRepeat(RemoteButton button) {
         CGPoint newLocation = CGPointMake(dpad.xAxis.value, -dpad.yAxis.value);
         BOOL isBeingTouched = dpad.up.pressed || dpad.down.pressed ||
                               dpad.left.pressed || dpad.right.pressed;
+        if ([strongSelf turnRingWithFingerAt:newLocation
+                              isBeingTouched:isBeingTouched]) {
+          return;
+        }
         if (!strongSelf->_isBeingTouched && isBeingTouched) {
           // If the dpad has gone from not being touched, to being touched,
           // report a touch down.
@@ -814,6 +822,36 @@ BOOL RemoteButtonSupportsAutoRepeat(RemoteButton button) {
         strongSelf->_lastSiriRemoteGamepadLocation = newLocation;
         strongSelf->_isBeingTouched = isBeingTouched;
       };
+}
+
+- (BOOL)turnRingWithFingerAt:(CGPoint)location
+              isBeingTouched:(BOOL)isBeingTouched {
+  if (!isBeingTouched) {
+    const BOOL wasTurning = _ringRotation.is_turning();
+    _ringRotation.LiftFinger();
+    return wasTurning;
+  }
+
+  const int clockwiseSteps =
+      _ringRotation.ClockwiseStepsForFingerAt(location.x, location.y);
+  if (!_ringRotation.is_turning()) {
+    return NO;
+  }
+  if (_isBeingTouched) {
+    [self touchCancelled];
+  }
+  [self pressButton:(clockwiseSteps > 0 ? kRight : kLeft)
+              times:std::abs(clockwiseSteps)];
+  return YES;
+}
+
+- (void)pressButton:(RemoteButton)button times:(int)times {
+  for (int press = 0; press < times; ++press) {
+    [self sendKeyEventWithRemoteButton:button
+                             eventType:blink::WebInputEvent::Type::kKeyDown];
+    [self sendKeyEventWithRemoteButton:button
+                             eventType:blink::WebInputEvent::Type::kKeyUp];
+  }
 }
 
 - (void)touchAtPosition:(CGPoint)position

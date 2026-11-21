@@ -35,20 +35,51 @@
 #include "components/crash/core/app/crashpad.h"
 #include "content/public/app/content_main.h"
 #include "content/public/app/content_main_runner.h"
+#include "content/public/browser/media_session.h"
 #include "content/public/browser/render_view_host.h"
 #include "content/public/browser/render_widget_host.h"
 #include "net/base/apple/url_conversions.h"
 #include "starboard/common/command_line.h"
 #include "starboard/common/time.h"
 #include "starboard/tvos/shared/application_darwin.h"
+#import "starboard/tvos/shared/media/picture_in_picture.h"
+#import "starboard/tvos/shared/media/pip_spike_log.h"
+#include "base/functional/bind.h"
+#include "base/values.h"
+#include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/web_contents.h"
+#include "content/public/common/isolated_world_ids.h"
+
+static NSString* const kPipSpikeCommand = @"PipSpikeCommand";
+static NSString* const kPipSpikeDarwinPrefix =
+    @"com.deividfortuna.dedtube.spike.";
+
+static void PipSpikeDarwinCallback(CFNotificationCenterRef center,
+                                   void* observer,
+                                   CFNotificationName name,
+                                   const void* object,
+                                   CFDictionaryRef userInfo) {
+  NSString* command = [(__bridge NSString*)name
+      substringFromIndex:kPipSpikeDarwinPrefix.length];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [NSNotificationCenter.defaultCenter postNotificationName:kPipSpikeCommand
+                                                      object:command];
+  });
+}
 
 static int g_argc = 0;
 static const char** g_argv = nullptr;
 
-@interface CobaltAppSceneDelegate : UIResponder <UIWindowSceneDelegate>
+@interface CobaltAppSceneDelegate
+    : UIResponder <UIWindowSceneDelegate, SBDPictureInPictureDelegate>
 @end
 
-@implementation CobaltAppSceneDelegate
+@implementation CobaltAppSceneDelegate {
+  BOOL _isBlurPending;
+  BOOL _isConcealPending;
+  BOOL _returnsToMseWhenPipEnds;
+  BOOL _isMseSwitchPending;
+}
 
 - (content::WebContents*)getWebContents {
   CHECK_EQ(1u, content::Shell::windows().size());
@@ -92,6 +123,9 @@ static const char** g_argv = nullptr;
   window.rootViewController = controller;
   [window makeKeyAndVisible];
 
+  SBDPictureInPicture.sharedInstance.delegate = self;
+  [self observeSpikeCommands];
+
   // Handle deep link when the app is launched (cold start). The URL is
   // delivered via connectionOptions.
   [self handleDeepLink:connectionOptions.URLContexts];
@@ -105,6 +139,9 @@ static const char** g_argv = nullptr;
 }
 
 - (void)sceneWillEnterForeground:(UIScene*)scene {
+  PipSpikeLog(@"scene: will enter foreground");
+  _isBlurPending = NO;
+  _isConcealPending = NO;
   content::WebContents* web_contents = [self getWebContents];
   // A visible page is automatically unfrozen and it should not call
   // `SetPageFrozen`.
@@ -133,21 +170,203 @@ static const char** g_argv = nullptr;
         }));
   });
 
+  _isBlurPending = NO;
   content::WebContents* web_contents = [self getWebContents];
   web_contents->GetRenderViewHost()->GetWidget()->Focus();
+  PipSpikeLog(@"scene: did become active");
+  if (_isMseSwitchPending) {
+    _isMseSwitchPending = NO;
+    [self runSpikeScript:@"dedtubeSpike.use('mse')"];
+  }
 }
 
 - (void)sceneWillResignActive:(UIScene*)scene {
+  _isBlurPending = SBDPictureInPicture.sharedInstance.isRunning;
+  PipSpikeLog([NSString
+      stringWithFormat:@"scene: will resign active, PiP runs %d",
+                       _isBlurPending]);
+  if (!_isBlurPending) {
+    [self blurWebContents];
+  }
+}
+
+- (void)sceneDidEnterBackground:(UIScene*)scene {
+  _isConcealPending = SBDPictureInPicture.sharedInstance.isRunning;
+  PipSpikeLog([NSString
+      stringWithFormat:@"scene: did enter background, PiP runs %d",
+                       _isConcealPending]);
+  if (!_isConcealPending) {
+    [self concealWebContents];
+  }
+}
+
+- (void)blurWebContents {
   content::WebContents* web_contents = [self getWebContents];
   web_contents->GetRenderViewHost()->GetWidget()->Blur();
 }
 
-- (void)sceneDidEnterBackground:(UIScene*)scene {
+- (void)concealWebContents {
   content::WebContents* web_contents = [self getWebContents];
   web_contents->UpdateWebContentsVisibility(content::Visibility::HIDDEN);
   // Freeze the page when entering background, triggering `document.onfreeze`
   // event in JavaScript.
   web_contents->SetPageFrozen(true);
+}
+
+#pragma mark - SBDPictureInPictureDelegate
+
+- (void)pictureInPictureWillStartDetached {
+  content::RenderFrameHost* frame =
+      [self getWebContents]->GetPrimaryMainFrame();
+  frame->ExecuteJavaScriptForTests(
+      u"dedtubeSpike.release()", base::BindOnce([](base::Value result) {
+        std::string text =
+            result.is_string() ? result.GetString() : result.DebugString();
+        PipSpikeLog([NSString
+            stringWithFormat:@"page: %@", base::SysUTF8ToNSString(text)]);
+        const std::string gain_prefix = "gain:";
+        if (text.rfind(gain_prefix, 0) == 0) {
+          [SBDPictureInPicture.sharedInstance
+              setDetachedVolume:std::stof(text.substr(gain_prefix.size()))];
+        }
+      }),
+      content::ISOLATED_WORLD_ID_GLOBAL);
+}
+
+- (void)resumeAfterDetachedPictureInPicture {
+  SBDPictureInPicture* pictureInPicture = SBDPictureInPicture.sharedInstance;
+  NSString* script =
+      [NSString stringWithFormat:@"dedtubeSpike.resume(%.2f)",
+                                 pictureInPicture.lastDetachedPosition];
+  content::RenderFrameHost* frame =
+      [self getWebContents]->GetPrimaryMainFrame();
+  frame->ExecuteJavaScriptForTests(
+      base::SysNSStringToUTF16(script),
+      base::BindOnce([](base::Value result) {
+        std::string text =
+            result.is_string() ? result.GetString() : result.DebugString();
+        PipSpikeLog([NSString
+            stringWithFormat:@"page: %@", base::SysUTF8ToNSString(text)]);
+        const std::string link_prefix = "link:";
+        if (text.rfind(link_prefix, 0) == 0) {
+          cobalt::browser::DeepLinkManager::GetInstance()->OnDeepLink(
+              text.substr(link_prefix.size()));
+        }
+      }),
+      content::ISOLATED_WORLD_ID_GLOBAL);
+}
+
+- (void)pictureInPictureDidEnd {
+  PipSpikeLog([NSString
+      stringWithFormat:@"scene: PiP ended, blur pending %d, conceal pending %d",
+                       _isBlurPending, _isConcealPending]);
+  SBDPictureInPicture* pictureInPicture = SBDPictureInPicture.sharedInstance;
+  PipSpikeLog([NSString
+      stringWithFormat:@"scene: end was detached %d, restore %d, position %.2f",
+                       pictureInPicture.lastEndWasDetached,
+                       pictureInPicture.lastEndWasRestore,
+                       pictureInPicture.lastDetachedPosition]);
+  BOOL shouldResumeInPage = pictureInPicture.lastEndWasDetached &&
+                            pictureInPicture.lastEndWasRestore;
+  if (shouldResumeInPage) {
+    [self resumeAfterDetachedPictureInPicture];
+  }
+  if (_returnsToMseWhenPipEnds) {
+    _returnsToMseWhenPipEnds = NO;
+    if (_isConcealPending) {
+      _isMseSwitchPending = YES;
+    } else {
+      [self runSpikeScript:@"dedtubeSpike.use('mse')"];
+    }
+  }
+  if (_isBlurPending) {
+    [self blurWebContents];
+  }
+  if (_isConcealPending) {
+    [self concealWebContents];
+  }
+  _isBlurPending = NO;
+  _isConcealPending = NO;
+}
+
+- (void)observeSpikeCommands {
+  for (NSString* command in
+       @[
+         @"hls", @"mse", @"pip", @"stop", @"state", @"enter", @"enter1",
+         @"script"
+       ]) {
+    NSString* name =
+        [kPipSpikeDarwinPrefix stringByAppendingString:command];
+    CFNotificationCenterAddObserver(
+        CFNotificationCenterGetDarwinNotifyCenter(), nullptr,
+        PipSpikeDarwinCallback, (__bridge CFStringRef)name, nullptr,
+        CFNotificationSuspensionBehaviorDeliverImmediately);
+  }
+  [NSNotificationCenter.defaultCenter
+      addObserverForName:kPipSpikeCommand
+                  object:nil
+                   queue:NSOperationQueue.mainQueue
+              usingBlock:^(NSNotification* notification) {
+                [self runSpikeCommand:notification.object];
+              }];
+}
+
+- (void)runSpikeCommand:(NSString*)command {
+  PipSpikeLog([NSString stringWithFormat:@"command: %@", command]);
+  SBDPictureInPicture* pictureInPicture = SBDPictureInPicture.sharedInstance;
+  if ([command isEqualToString:@"hls"]) {
+    [self runSpikeScript:@"dedtubeSpike.use('hls')"];
+  } else if ([command isEqualToString:@"mse"]) {
+    [self runSpikeScript:@"dedtubeSpike.use('mse')"];
+  } else if ([command isEqualToString:@"pip"]) {
+    [pictureInPicture start];
+  } else if ([command isEqualToString:@"stop"]) {
+    [pictureInPicture stop];
+  } else if ([command isEqualToString:@"state"]) {
+    [self runSpikeScript:@"dedtubeSpike.state()"];
+  } else if ([command isEqualToString:@"script"]) {
+    NSString* directory = NSSearchPathForDirectoriesInDomains(
+                              NSCachesDirectory, NSUserDomainMask, YES)
+                              .firstObject;
+    NSString* path =
+        [directory stringByAppendingPathComponent:@"pip_spike_script.js"];
+    NSString* script = [NSString stringWithContentsOfFile:path
+                                                 encoding:NSUTF8StringEncoding
+                                                    error:nil];
+    [self runSpikeScript:script ?: @"'no script file'"];
+  } else if ([command isEqualToString:@"enter1"]) {
+    _returnsToMseWhenPipEnds = YES;
+    [self runSpikeScript:@"dedtubeSpike.use('hls')"];
+    [pictureInPicture startWhenPlayerLayerIsReady];
+  } else if ([command isEqualToString:@"enter"]) {
+    [self runSpikeScript:@"dedtubeSpike.use('hls')"];
+    [pictureInPicture startDetachedWhenPlayerLayerIsReady];
+  }
+}
+
+- (void)runSpikeScript:(NSString*)script {
+  content::RenderFrameHost* frame =
+      [self getWebContents]->GetPrimaryMainFrame();
+  frame->ExecuteJavaScriptForTests(
+      base::SysNSStringToUTF16(script),
+      base::BindOnce([](base::Value result) {
+        std::string text =
+            result.is_string() ? result.GetString() : result.DebugString();
+        PipSpikeLog([NSString
+            stringWithFormat:@"page: %@", base::SysUTF8ToNSString(text)]);
+      }),
+      content::ISOLATED_WORLD_ID_GLOBAL);
+}
+
+- (void)pictureInPictureSetPlaying:(BOOL)playing {
+  PipSpikeLog([NSString stringWithFormat:@"scene: PiP set playing %d", playing]);
+  content::MediaSession* media_session =
+      content::MediaSession::Get([self getWebContents]);
+  if (playing) {
+    media_session->Resume(content::MediaSession::SuspendType::kUI);
+  } else {
+    media_session->Suspend(content::MediaSession::SuspendType::kUI);
+  }
 }
 @end
 

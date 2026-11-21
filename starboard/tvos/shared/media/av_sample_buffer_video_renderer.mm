@@ -22,6 +22,7 @@
 #include "base/apple/foundation_util.h"
 #import "starboard/tvos/shared/defines.h"
 #include "starboard/tvos/shared/media/avutil/utils.h"
+#import "starboard/tvos/shared/media/picture_in_picture.h"
 #include "starboard/tvos/shared/media/preferred_display_frame_rate.h"
 #import "starboard/tvos/shared/media/player_manager.h"
 #import "starboard/tvos/shared/starboard_application.h"
@@ -164,6 +165,7 @@ AVSBVideoRenderer::AVSBVideoRenderer(JobQueue* job_queue,
 
     id<SBDStarboardApplication> application = SBDGetApplication();
     [application attachPlayerView:display_view_];
+    [SBDPictureInPicture.sharedInstance attachDisplayLayer:display_layer_];
   });
 
   ObserverRegistry::RegisterObserver(&observer_);
@@ -221,6 +223,7 @@ AVSBVideoRenderer::~AVSBVideoRenderer() {
   onApplicationMainThread(^{
     [display_layer flush];
     [display_view removeFromSuperview];
+    [SBDPictureInPicture.sharedInstance detachDisplayLayer:display_layer];
 
     // Clear preferred display criteria.
     GetPlatformWindow().avDisplayManager.preferredDisplayCriteria = nil;

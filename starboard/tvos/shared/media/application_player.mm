@@ -22,6 +22,8 @@
 #include "starboard/media.h"
 #import "starboard/tvos/shared/defines.h"
 #import "starboard/tvos/shared/media/application_drm_system.h"
+#import "starboard/tvos/shared/media/picture_in_picture.h"
+#import "starboard/tvos/shared/media/pip_spike_log.h"
 #import "starboard/tvos/shared/media/player_manager.h"
 #import "starboard/tvos/shared/starboard_application.h"
 
@@ -292,6 +294,11 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
 
 - (void)applicationWillResignActive {
   dispatch_async(dispatch_get_main_queue(), ^{
+    if (SBDPictureInPicture.sharedInstance.isRunning) {
+      PipSpikeLog(@"URL player: resign active, no pause because PiP runs");
+      return;
+    }
+    PipSpikeLog(@"URL player: resign active, pause");
     // It's possible that the player has not been instantiated yet, so set a
     // flag to tell the player to pause as soon as possible.
     self->_playerShouldPause = true;
@@ -376,6 +383,8 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
               &kPlayerOutputObscuredDueToInsufficientExternalProtectionContext];
 
   _playerView.player = _player;
+  [SBDPictureInPicture.sharedInstance
+      attachPlayerLayer:_playerView.playerLayer];
 }
 
 - (void)playbackStalled:(NSNotification*)notification {
@@ -664,6 +673,10 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
   }
   _playerState = state;
   _errorOccurred = false;
+  PipSpikeLog([NSString
+      stringWithFormat:@"URL player: state %d, time %.2f, url %@ (%lu)",
+                       state, CMTimeGetSeconds(_player.currentTime),
+                       _url.scheme, (unsigned long)_url.absoluteString.length]);
   if (state == kSbPlayerStatePresenting) {
     CGSize naturalSize = _player.currentItem.presentationSize;
     _frameWidth = naturalSize.width;
@@ -689,6 +702,8 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
   if (_destroyCalled || _errorOccurred) {
     return;
   }
+  PipSpikeLog(
+      [NSString stringWithFormat:@"URL player: error %d %@", error, message]);
   _errorOccurred = true;
 
   @synchronized(self) {
@@ -754,6 +769,8 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
 }
 
 - (void)shutdownPlayer {
+  [SBDPictureInPicture.sharedInstance
+      detachPlayerLayer:_playerView.playerLayer];
   _player.rate = 0;
   [_player replaceCurrentItemWithPlayerItem:nil];
   _player = nil;

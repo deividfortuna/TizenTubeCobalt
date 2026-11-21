@@ -2934,6 +2934,8 @@ source_set("browser") {
 
       if (is_cobalt) {
         sources += [
+          "renderer_host/siri_remote_ring_rotation.cc",
+          "renderer_host/siri_remote_ring_rotation.h",
           "speech/tts_tvos.h",
           "speech/tts_tvos.mm",
         ]

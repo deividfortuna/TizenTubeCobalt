@@ -19,12 +19,16 @@
 
 #include "base/strings/sys_string_conversions.h"
 #include "build/build_config.h"
+#import "starboard/tvos/shared/media/picture_in_picture.h"
 #include "starboard/tvos/shared/media/preferred_display_frame_rate.h"
 
 namespace h5vcc_tizentube {
 namespace platform {
 
 namespace {
+
+constexpr char kPictureInPictureFeature[] =
+    "android.software.picture_in_picture";
 
 std::string BundleInfoString(NSString* key) {
   NSString* value = [NSBundle mainBundle].infoDictionary[key];
@@ -60,10 +64,17 @@ void SetFrameRate(float frame_rate) {
   starboard::SetPreferredDisplayFrameRate(frame_rate);
 }
 
-void EnterPIP() {}
+void EnterPIP() {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:@"PipSpikeCommand"
+                      object:@"enter"];
+  });
+}
 
 bool HasSystemFeature(const std::string& feature_name) {
-  return false;
+  return feature_name == kPictureInPictureFeature &&
+         SBDPictureInPicture.isSupported;
 }
 
 }  // namespace platform
