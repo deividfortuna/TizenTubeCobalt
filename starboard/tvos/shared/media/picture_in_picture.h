@@ -22,6 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol SBDPictureInPictureDelegate <NSObject>
 
 - (void)pictureInPictureDidEnd;
+- (void)pictureInPictureWillStartDetached;
 - (void)pictureInPictureSetPlaying:(BOOL)playing;
 
 @end
@@ -33,10 +34,19 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, weak, nullable) id<SBDPictureInPictureDelegate> delegate;
 @property(nonatomic, readonly, getter=isRunning) BOOL running;
+@property(nonatomic, readonly) BOOL lastEndWasDetached;
+@property(nonatomic, readonly) BOOL lastEndWasRestore;
+@property(nonatomic, readonly) double lastDetachedPosition;
 
 - (void)attachDisplayLayer:(AVSampleBufferDisplayLayer*)displayLayer;
 - (void)detachDisplayLayer:(AVSampleBufferDisplayLayer*)displayLayer;
+- (void)attachPlayerLayer:(AVPlayerLayer*)playerLayer;
+- (void)detachPlayerLayer:(AVPlayerLayer*)playerLayer;
 - (void)start;
+- (void)startWhenPlayerLayerIsReady;
+- (void)startDetachedWhenPlayerLayerIsReady;
+- (void)setDetachedVolume:(float)volume;
+- (void)stop;
 
 @end
 

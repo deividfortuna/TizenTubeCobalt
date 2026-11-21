@@ -65,7 +65,11 @@ void SetFrameRate(float frame_rate) {
 }
 
 void EnterPIP() {
-  [SBDPictureInPicture.sharedInstance start];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:@"PipSpikeCommand"
+                      object:@"enter"];
+  });
 }
 
 bool HasSystemFeature(const std::string& feature_name) {
